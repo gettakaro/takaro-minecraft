@@ -8,121 +8,128 @@ This document tracks the remaining methods that need to be implemented for full 
 
 **Purpose**: Add items to a player's inventory
 
+**Request Parameters**:
+- `player` (object, required): `{"gameId": "uuid"}`
+- `item` (string, required): Item code
+- `amount` (number, required)
+- `quality` (string, optional)
+
+**Response**: null on success
+
 **Implementation Details**:
 ```java
 private void handleGiveItem(String requestId, JsonObject message) {
-    // Parse player.gameId, item code, amount, optional quality
-    // Convert item code to Material enum
-    Material material = Material.getMaterial(itemCode.toUpperCase());
+    JsonObject args = parseArgsFromMessage(message);
     
-    // Create ItemStack with amount
-    ItemStack itemStack = new ItemStack(material, amount);
+    // Parse required parameters
+    JsonObject player = args.getAsJsonObject("player");
+    String gameId = player.get("gameId").getAsString();
+    String itemCode = args.get("item").getAsString();
+    int amount = args.get("amount").getAsInt();
     
-    // Apply quality/durability if applicable
-    if (quality != null && material.getMaxDurability() > 0) {
-        short durability = (short)(material.getMaxDurability() * (1 - quality/100.0));
-        itemStack.setDurability(durability);
-    }
+    // Parse optional quality
+    String quality = args.has("quality") ? args.get("quality").getAsString() : null;
     
-    // Add to player inventory
-    HashMap<Integer, ItemStack> leftover = player.getInventory().addItem(itemStack);
-    
-    // Handle inventory full case - drop items at player location
-    if (!leftover.isEmpty()) {
-        for (ItemStack item : leftover.values()) {
-            player.getWorld().dropItem(player.getLocation(), item);
-        }
-    }
+    // Implementation: Convert item code to Material, create ItemStack, add to inventory
+    // Return null payload on success
 }
 ```
 
-**Error Cases**:
-- Invalid item code
-- Player offline
-- Invalid amount (negative or zero)
-
-## 3. listEntities()
+## 2. listEntities()
 
 **Purpose**: List all entities (mobs, NPCs) in the game world
+
+**Request Parameters**: None
+
+**Response**: Array of entity objects with:
+- `code` (string, required): Unique entity identifier
+- `name` (string, required): Display name
+- `description` (string, optional): Entity description
+- `type` (string, optional): "friendly" or "hostile"
+- `metadata` (object, optional): Additional game-specific data
 
 **Implementation Details**:
 ```java
 private void handleListEntities(String requestId) {
     JsonArray entitiesArray = new JsonArray();
     
-    // Iterate through all worlds
+    // Get unique entity types from all worlds
+    Set<EntityType> processedTypes = new HashSet<>();
+    
     for (World world : Bukkit.getWorlds()) {
-        // Get all living entities
         for (LivingEntity entity : world.getLivingEntities()) {
-            // Skip players
-            if (entity instanceof Player) continue;
+            if (entity instanceof Player || processedTypes.contains(entity.getType())) continue;
             
             JsonObject entityObj = new JsonObject();
-            entityObj.addProperty("id", entity.getUniqueId().toString());
-            entityObj.addProperty("type", entity.getType().name());
-            entityObj.addProperty("name", entity.getCustomName() != null ? 
-                                  entity.getCustomName() : entity.getType().name());
+            entityObj.addProperty("code", entity.getType().name());
+            entityObj.addProperty("name", formatEntityName(entity.getType()));
+            entityObj.addProperty("description", getEntityDescription(entity.getType()));
             
-            Location loc = entity.getLocation();
-            JsonObject location = new JsonObject();
-            location.addProperty("x", loc.getX());
-            location.addProperty("y", loc.getY());
-            location.addProperty("z", loc.getZ());
-            location.addProperty("world", loc.getWorld().getName());
-            entityObj.add("location", location);
-            
-            entityObj.addProperty("health", entity.getHealth());
-            entityObj.addProperty("maxHealth", entity.getMaxHealth());
+            // Determine if hostile or friendly
+            entityObj.addProperty("type", isHostile(entity) ? "hostile" : "friendly");
             
             entitiesArray.add(entityObj);
+            processedTypes.add(entity.getType());
         }
     }
 }
 ```
 
-**Performance Considerations**:
-- This could be expensive on large servers
-- Consider implementing pagination or limits
-- Cache results for a short time
-
-## 4. listLocations()
+## 3. listLocations()
 
 **Purpose**: List notable locations/structures in the game
+
+**Request Parameters**: None
+
+**Response**: Array of location objects with:
+- `name` (string, required): Location name
+- `code` (string, required): Unique identifier
+- For circular locations:
+  - `position` (object): `{"x": number, "y": number, "z": number}`
+  - `radius` (number)
+- For rectangular locations:
+  - `position` (object): `{"x": number, "y": number, "z": number}`
+  - `sizeX` (number)
+  - `sizeY` (number)
+  - `sizeZ` (number)
+- `metadata` (object, optional)
 
 **Implementation Details**:
 ```java
 private void handleListLocations(String requestId) {
     JsonArray locationsArray = new JsonArray();
     
-    // Add spawn points for each world
+    // Add spawn points as circular locations
     for (World world : Bukkit.getWorlds()) {
         Location spawn = world.getSpawnLocation();
         JsonObject spawnObj = new JsonObject();
         spawnObj.addProperty("name", world.getName() + " Spawn");
-        spawnObj.addProperty("type", "spawn");
-        spawnObj.addProperty("x", spawn.getX());
-        spawnObj.addProperty("y", spawn.getY());
-        spawnObj.addProperty("z", spawn.getZ());
-        spawnObj.addProperty("world", world.getName());
+        spawnObj.addProperty("code", "spawn_" + world.getName());
+        
+        JsonObject position = new JsonObject();
+        position.addProperty("x", spawn.getX());
+        position.addProperty("y", spawn.getY());
+        position.addProperty("z", spawn.getZ());
+        spawnObj.add("position", position);
+        
+        spawnObj.addProperty("radius", 50); // 50 block radius around spawn
+        
         locationsArray.add(spawnObj);
     }
-    
-    // Could extend to include:
-    // - Nether portals (scan for portal blocks)
-    // - End portals
-    // - Villages (if using newer MC versions with structure API)
-    // - Custom waypoints from a config file
 }
 ```
 
-**Extension Ideas**:
-- Integration with waypoint plugins
-- Structure detection using Minecraft's structure API
-- Player-created locations from a database
-
-## 5. executeConsoleCommand(command)
+## 4. executeConsoleCommand(command)
 
 **Purpose**: Execute arbitrary console commands
+
+**Request Parameters**:
+- `command` (string, required): The command to execute
+
+**Response**:
+- `success` (boolean): Whether command executed successfully
+- `rawResult` (string, optional): Command output
+- `errorMessage` (string, nullable): Error details if failed
 
 **Implementation Details**:
 ```java
@@ -130,42 +137,47 @@ private void handleExecuteConsoleCommand(String requestId, JsonObject message) {
     JsonObject args = parseArgsFromMessage(message);
     String command = args.get("command").getAsString();
     
-    // Security: Validate command isn't dangerous
-    // Consider implementing a whitelist of allowed commands
-    
-    // Execute command on main thread
+    // Execute on main thread and capture output
     Bukkit.getScheduler().runTask(plugin, () -> {
         try {
-            // Capture command output by implementing a custom CommandSender
-            ConsoleCommandSender console = Bukkit.getConsoleSender();
+            // Custom CommandSender to capture output
             boolean success = Bukkit.dispatchCommand(console, command);
             
-            // Send response with command output
-            JsonObject response = new JsonObject();
-            response.addProperty("success", success);
-            response.addProperty("output", capturedOutput);
-            sendResponse(requestId, response);
+            JsonObject payload = new JsonObject();
+            payload.addProperty("success", success);
+            payload.addProperty("rawResult", capturedOutput);
+            payload.add("errorMessage", null);
+            
+            sendResponse(requestId, payload);
         } catch (Exception e) {
-            sendErrorResponse(requestId, "Command execution failed: " + e.getMessage());
+            JsonObject payload = new JsonObject();
+            payload.addProperty("success", false);
+            payload.add("rawResult", null);
+            payload.addProperty("errorMessage", e.getMessage());
+            
+            sendResponse(requestId, payload);
         }
     });
 }
 ```
 
-**Security Considerations**:
-- Implement command whitelist/blacklist
-- Log all executed commands
-- Consider permission levels
-- Sanitize command input
-
-## 6. teleportPlayer(player, x, y, z)
+## 5. teleportPlayer(player, x, y, z)
 
 **Purpose**: Teleport a player to specific coordinates
+
+**Request Parameters**:
+- `player` (object, required): `{"gameId": "uuid"}`
+- `x` (number, required): X coordinate
+- `y` (number, required): Y coordinate
+- `z` (number, required): Z coordinate
+
+**Response**: null on success
 
 **Implementation Details**:
 ```java
 private void handleTeleportPlayer(String requestId, JsonObject message) {
     JsonObject args = parseArgsFromMessage(message);
+    
     JsonObject player = args.getAsJsonObject("player");
     String gameId = player.get("gameId").getAsString();
     
@@ -173,99 +185,99 @@ private void handleTeleportPlayer(String requestId, JsonObject message) {
     double y = args.get("y").getAsDouble();
     double z = args.get("z").getAsDouble();
     
-    // Optional: world parameter
-    String worldName = args.has("world") ? args.get("world").getAsString() : null;
-    
     Player targetPlayer = Bukkit.getPlayer(UUID.fromString(gameId));
-    
-    // Create location
-    World world = worldName != null ? Bukkit.getWorld(worldName) : targetPlayer.getWorld();
-    Location teleportLocation = new Location(world, x, y, z);
     
     // Teleport on main thread
     Bukkit.getScheduler().runTask(plugin, () -> {
+        Location teleportLocation = new Location(targetPlayer.getWorld(), x, y, z);
         targetPlayer.teleport(teleportLocation);
         
-        // Optional: Add teleport effects
-        targetPlayer.playSound(teleportLocation, Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+        // Send null response on success
+        sendResponse(requestId, null);
     });
 }
 ```
 
-**Safety Features**:
-- Validate coordinates are within world bounds
-- Check if target location is safe (not in solid block)
-- Handle cross-dimension teleports
-
-## 7. kickPlayer(player, reason)
+## 6. kickPlayer(player, reason)
 
 **Purpose**: Disconnect a player from the server
+
+**Request Parameters**:
+- `player` (object, required): `{"gameId": "uuid"}`
+- `reason` (string, optional): Kick reason
+
+**Response**: null on success
 
 **Implementation Details**:
 ```java
 private void handleKickPlayer(String requestId, JsonObject message) {
     JsonObject args = parseArgsFromMessage(message);
+    
     JsonObject player = args.getAsJsonObject("player");
     String gameId = player.get("gameId").getAsString();
-    String reason = args.get("reason").getAsString();
+    
+    // Optional reason
+    String reason = args.has("reason") ? args.get("reason").getAsString() : "Kicked by administrator";
     
     Player targetPlayer = Bukkit.getPlayer(UUID.fromString(gameId));
     
     // Kick on main thread
     Bukkit.getScheduler().runTask(plugin, () -> {
-        targetPlayer.kickPlayer("§c" + reason);
-        
-        // Log the kick
-        logger.info("Kicked player " + targetPlayer.getName() + " for: " + reason);
+        targetPlayer.kickPlayer(reason);
+        sendResponse(requestId, null);
     });
-    
-    // Send success response
-    sendResponse(requestId, null);
 }
 ```
 
-## 8. banPlayer(player, reason, expiresAt)
+## 7. banPlayer(player, reason, expiresAt)
 
 **Purpose**: Ban a player from the server
+
+**Request Parameters**:
+- `player` (object, required): `{"gameId": "uuid"}`
+- `reason` (string, optional): Ban reason
+- `expiresAt` (string, optional): ISO 8601 date for ban expiration
+
+**Response**: null on success
 
 **Implementation Details**:
 ```java
 private void handleBanPlayer(String requestId, JsonObject message) {
     JsonObject args = parseArgsFromMessage(message);
+    
     JsonObject player = args.getAsJsonObject("player");
     String gameId = player.get("gameId").getAsString();
-    String reason = args.get("reason").getAsString();
     
-    // Parse optional expiration
+    // Optional parameters
+    String reason = args.has("reason") ? args.get("reason").getAsString() : "Banned by administrator";
+    
     Date expirationDate = null;
     if (args.has("expiresAt")) {
         String expiresAt = args.get("expiresAt").getAsString();
-        // Parse ISO 8601 date format
         expirationDate = parseISO8601Date(expiresAt);
     }
     
-    // Get player (might be offline)
     OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(UUID.fromString(gameId));
     
-    // Ban the player
     BanList banList = Bukkit.getBanList(BanList.Type.NAME);
     banList.addBan(targetPlayer.getName(), reason, expirationDate, "Takaro");
     
-    // If player is online, kick them
     if (targetPlayer.isOnline()) {
-        targetPlayer.getPlayer().kickPlayer("§cYou have been banned: " + reason);
+        targetPlayer.getPlayer().kickPlayer("You have been banned: " + reason);
     }
+    
+    sendResponse(requestId, null);
 }
 ```
 
-**Features**:
-- Support temporary bans with expiration
-- Store ban source (Takaro)
-- Handle offline players
-
-## 9. unbanPlayer(gameId)
+## 8. unbanPlayer(gameId)
 
 **Purpose**: Remove a player's ban
+
+**Request Parameters**:
+- `gameId` (string, required): Player's game ID
+
+**Response**: null on success
 
 **Implementation Details**:
 ```java
@@ -273,15 +285,12 @@ private void handleUnbanPlayer(String requestId, JsonObject message) {
     JsonObject args = parseArgsFromMessage(message);
     String gameId = args.get("gameId").getAsString();
     
-    // Get player info
     OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(UUID.fromString(gameId));
     
-    // Remove from ban list
     BanList banList = Bukkit.getBanList(BanList.Type.NAME);
     
     if (banList.isBanned(targetPlayer.getName())) {
         banList.pardon(targetPlayer.getName());
-        logger.info("Unbanned player: " + targetPlayer.getName());
         sendResponse(requestId, null);
     } else {
         sendErrorResponse(requestId, "Player is not banned");
@@ -289,19 +298,21 @@ private void handleUnbanPlayer(String requestId, JsonObject message) {
 }
 ```
 
-## 10. shutdown()
+## 9. shutdown()
 
 **Purpose**: Gracefully shutdown the server
+
+**Request Parameters**: None
+
+**Response**: null on success
 
 **Implementation Details**:
 ```java
 private void handleShutdown(String requestId, JsonObject message) {
-    // Optional: Parse delay parameter
-    JsonObject args = parseArgsFromMessage(message);
-    int delaySeconds = args.has("delay") ? args.get("delay").getAsInt() : 30;
+    // No parameters according to spec
     
-    // Announce shutdown to players
-    Bukkit.broadcastMessage("§c[Takaro] Server shutting down in " + delaySeconds + " seconds!");
+    // Announce shutdown with 30 second warning
+    Bukkit.broadcastMessage("[Takaro] Server shutting down in 30 seconds!");
     
     // Schedule shutdown
     Bukkit.getScheduler().runTaskLater(plugin, () -> {
@@ -310,25 +321,18 @@ private void handleShutdown(String requestId, JsonObject message) {
             world.save();
         }
         
-        // Kick all players with message
+        // Kick all players
         for (Player player : Bukkit.getOnlinePlayers()) {
-            player.kickPlayer("§cServer is shutting down");
+            player.kickPlayer("Server is shutting down");
         }
         
         // Shutdown server
         Bukkit.shutdown();
-    }, delaySeconds * 20L); // Convert seconds to ticks
+    }, 600L); // 30 seconds = 600 ticks
     
-    // Send response immediately
     sendResponse(requestId, null);
 }
 ```
-
-**Safety Features**:
-- Configurable delay
-- Save all world data
-- Graceful player disconnection
-- Warning messages
 
 ## General Implementation Notes
 
