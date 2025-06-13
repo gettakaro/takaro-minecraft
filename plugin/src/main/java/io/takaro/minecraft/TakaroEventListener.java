@@ -25,40 +25,43 @@ public class TakaroEventListener implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
+        logger.info("Player join event triggered: " + player.getName());
         
         JsonObject eventData = new JsonObject();
         eventData.add("player", createPlayerDataWithDetails(player));
         
         sendGameEvent("player-connected", eventData);
-        logger.info("Player connected event sent: " + player.getName());
+        logger.info("Player connected event processed: " + player.getName());
     }
     
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
+        logger.info("Player quit event triggered: " + player.getName());
         
         JsonObject eventData = new JsonObject();
         eventData.add("player", createPlayerData(player));
         
         sendGameEvent("player-disconnected", eventData);
-        logger.info("Player disconnected event sent: " + player.getName());
+        logger.info("Player disconnected event processed: " + player.getName());
     }
     
     @EventHandler
     public void onPlayerChat(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
         String message = event.getMessage();
+        logger.info("Chat event triggered: " + player.getName() + ": " + message);
         
-        JsonObject eventData = new JsonObject();
-        eventData.add("player", createPlayerData(player));
-        eventData.addProperty("channel", "global");
-        eventData.addProperty("msg", message);
-        
-        sendGameEvent("chat-message", eventData);
-        
-        if (plugin.getConfig().getBoolean("takaro.logging.debug", false)) {
-            logger.info("Chat message event sent: " + player.getName() + ": " + message);
-        }
+        // Since this is an async event, schedule the Takaro event sending on the main thread
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            JsonObject eventData = new JsonObject();
+            eventData.add("player", createPlayerData(player));
+            eventData.addProperty("channel", "global");
+            eventData.addProperty("msg", message);
+            
+            sendGameEvent("chat-message", eventData);
+            logger.info("Chat message event processed: " + player.getName());
+        });
     }
     
     @EventHandler
@@ -118,9 +121,19 @@ public class TakaroEventListener implements Listener {
     
     private void sendGameEvent(String eventType, JsonObject data) {
         TakaroWebSocketClient client = plugin.getWebSocketClient();
-        if (client != null && client.isAuthenticated()) {
-            client.sendGameEvent(eventType, data);
+        if (client == null) {
+            logger.warning("Cannot send " + eventType + " event - WebSocket client is null");
+            return;
         }
+        
+        if (!client.isAuthenticated()) {
+            logger.warning("Cannot send " + eventType + " event - not authenticated");
+            return;
+        }
+        
+        logger.info("Sending " + eventType + " event to Takaro");
+        client.sendGameEvent(eventType, data);
+        logger.info("Successfully sent " + eventType + " event to Takaro");
     }
     
     private JsonObject createPlayerData(Player player) {

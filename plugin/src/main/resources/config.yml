@@ -28,3 +28,14 @@ takaro:
 
     # Log all incoming/outgoing messages (for debugging)
     log_messages: false
+
+    # Forward server console logs to Takaro
+    forward_server_logs: true
+
+    # Minimum log level to forward (TRACE, DEBUG, INFO, WARN, ERROR, FATAL)
+    min_level: "INFO"
+
+    # List of logger names to filter out (avoid spam)
+    filtered_loggers:
+      - "org.java_websocket"
+      - "io.netty"

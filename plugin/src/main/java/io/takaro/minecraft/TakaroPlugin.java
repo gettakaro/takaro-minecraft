@@ -1,5 +1,7 @@
 package io.takaro.minecraft;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -12,6 +14,7 @@ public class TakaroPlugin extends JavaPlugin {
     
     private TakaroWebSocketClient webSocketClient;
     private TakaroEventListener eventListener;
+    private TakaroLogFilter logFilter;
     private boolean shuttingDown = false;
 
     @Override
@@ -28,6 +31,11 @@ public class TakaroPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(eventListener, this);
         
         initializeWebSocketConnection();
+        
+        // Initialize log filter after a delay to ensure WebSocket is connected
+        getServer().getScheduler().runTaskLater(this, () -> {
+            initializeLogFilter();
+        }, 100L); // 5 second delay
     }
 
     @Override
@@ -35,9 +43,41 @@ public class TakaroPlugin extends JavaPlugin {
         getLogger().info("Takaro Minecraft Plugin has been disabled!");
         shuttingDown = true;
         
+        // Stop log filter
+        if (logFilter != null) {
+            try {
+                logFilter.stop();
+                logFilter = null;
+                getLogger().info("Log filter stopped");
+            } catch (Exception e) {
+                getLogger().warning("Failed to stop log filter: " + e.getMessage());
+            }
+        }
+        
         if (webSocketClient != null) {
             webSocketClient.shutdown();
             webSocketClient = null;
+        }
+    }
+
+    private void initializeLogFilter() {
+        try {
+            if (getConfig().getBoolean("takaro.logging.forward_server_logs", true)) {
+                logFilter = new TakaroLogFilter(this);
+                logFilter.start();
+                
+                Logger rootLogger = (Logger) LogManager.getRootLogger();
+                rootLogger.addFilter(logFilter);
+                
+                getLogger().info("Log filter initialized - server logs will be forwarded to Takaro");
+            } else {
+                getLogger().info("Server log forwarding is disabled in config");
+            }
+        } catch (Exception e) {
+            getLogger().severe("Failed to initialize log filter: " + e.getMessage());
+            if (getConfig().getBoolean("takaro.logging.debug", false)) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -61,13 +101,17 @@ public class TakaroPlugin extends JavaPlugin {
                 if (webSocketClient != null) {
                     if (webSocketClient.isAuthenticated()) {
                         sender.sendMessage("§a[Takaro] §fWebSocket: §aConnected & Authenticated");
+                        sender.sendMessage("§a[Takaro] §fEvents: §aEnabled");
                     } else if (webSocketClient.isOpen()) {
                         sender.sendMessage("§a[Takaro] §fWebSocket: §eConnected (Not Authenticated)");
+                        sender.sendMessage("§c[Takaro] §fEvents: §cDisabled (Not Authenticated)");
                     } else {
                         sender.sendMessage("§a[Takaro] §fWebSocket: §cDisconnected");
+                        sender.sendMessage("§c[Takaro] §fEvents: §cDisabled (No Connection)");
                     }
                 } else {
                     sender.sendMessage("§a[Takaro] §fWebSocket: §cNot Initialized");
+                    sender.sendMessage("§c[Takaro] §fEvents: §cDisabled (Client Not Initialized)");
                 }
                 
                 return true;

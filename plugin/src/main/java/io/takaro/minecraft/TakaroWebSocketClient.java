@@ -186,8 +186,8 @@ public class TakaroWebSocketClient extends WebSocketClient {
         
         if (message.has("serverInfo")) {
             JsonObject serverInfo = message.getAsJsonObject("serverInfo");
-            logger.info("Server registered with Takaro. Server ID: " + 
-                    (serverInfo.has("id") ? serverInfo.get("id").getAsString() : "unknown"));
+            String serverId = serverInfo.has("id") ? serverInfo.get("id").getAsString() : "unknown";
+            logger.info("Server registered with Takaro. Server ID: " + serverId);
         }
     }
     
@@ -1047,9 +1047,8 @@ public class TakaroWebSocketClient extends WebSocketClient {
     
     public void sendGameEvent(String eventType, JsonObject data) {
         if (!isAuthenticated()) {
-            if (plugin.getConfig().getBoolean("takaro.logging.debug", false)) {
-                logger.warning("Cannot send game event - not authenticated");
-            }
+            logger.warning("Cannot send game event '" + eventType + "' - not authenticated (connection: " + 
+                          (isOpen() ? "open" : "closed") + ")");
             return;
         }
         
@@ -1061,11 +1060,29 @@ public class TakaroWebSocketClient extends WebSocketClient {
         eventMessage.addProperty("type", "gameEvent");
         eventMessage.add("payload", payload);
         
-        sendMessage(eventMessage);
-        
+        logger.info("Sending game event '" + eventType + "' to Takaro");
         if (plugin.getConfig().getBoolean("takaro.logging.debug", false)) {
-            logger.info("Sent game event: " + eventType);
+            logger.info("Event data: " + eventMessage.toString());
         }
+        
+        sendMessage(eventMessage);
+        logger.info("Game event '" + eventType + "' sent successfully");
+    }
+    
+    public void sendLogEvent(String message) {
+        if (!isAuthenticated()) {
+            if (plugin.getConfig().getBoolean("takaro.logging.debug", false)) {
+                logger.warning("Cannot send log event - not authenticated");
+            }
+            return;
+        }
+        
+        // Create log data object
+        JsonObject logData = new JsonObject();
+        logData.addProperty("msg", message);
+        
+        // Use the standard game event structure
+        sendGameEvent("log", logData);
     }
     
     public JsonObject createPlayerData(Player player) {
