@@ -3,13 +3,21 @@ package io.takaro.minecraft;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
 import org.bukkit.Bukkit;
+import org.bukkit.BanList;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitTask;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 
 import java.net.URI;
+import java.util.UUID;
 import java.util.logging.Logger;
 
 public class TakaroWebSocketClient extends WebSocketClient {
@@ -211,6 +219,18 @@ public class TakaroWebSocketClient extends WebSocketClient {
             case "getPlayers":
                 handleGetPlayers(requestId);
                 break;
+            case "getPlayerInventory":
+                handleGetPlayerInventory(requestId, message);
+                break;
+            case "getPlayerLocation":
+                handleGetPlayerLocation(requestId, message);
+                break;
+            case "listItems":
+                handleListItems(requestId);
+                break;
+            case "listBans":
+                handleListBans(requestId);
+                break;
             default:
                 // Send error for unimplemented actions
                 JsonObject errorResponse = new JsonObject();
@@ -272,6 +292,204 @@ public class TakaroWebSocketClient extends WebSocketClient {
         
         logger.info("Responding to getPlayers: " + playersArray.size() + " players online");
         sendMessage(response);
+    }
+    
+    private JsonObject parseArgsFromMessage(JsonObject message) {
+        try {
+            if (message.has("payload")) {
+                JsonObject payload = message.getAsJsonObject("payload");
+                if (payload.has("args")) {
+                    String argsString = payload.get("args").getAsString();
+                    return JsonParser.parseString(argsString).getAsJsonObject();
+                }
+            }
+        } catch (JsonSyntaxException e) {
+            logger.warning("Failed to parse args from message: " + e.getMessage());
+        }
+        return new JsonObject();
+    }
+    
+    private void handleGetPlayerInventory(String requestId, JsonObject message) {
+        JsonObject args = parseArgsFromMessage(message);
+        
+        if (!args.has("gameId")) {
+            sendErrorResponse(requestId, "gameId parameter is required");
+            return;
+        }
+        
+        String gameId = args.get("gameId").getAsString();
+        
+        try {
+            UUID playerUUID = UUID.fromString(gameId);
+            Player player = Bukkit.getPlayer(playerUUID);
+            
+            if (player == null) {
+                sendErrorResponse(requestId, "Player not found or offline");
+                return;
+            }
+            
+            JsonArray inventoryArray = new JsonArray();
+            ItemStack[] contents = player.getInventory().getContents();
+            
+            for (ItemStack item : contents) {
+                if (item != null && item.getType() != Material.AIR) {
+                    JsonObject itemObj = new JsonObject();
+                    itemObj.addProperty("code", item.getType().name());
+                    itemObj.addProperty("name", item.getType().name().toLowerCase().replace("_", " "));
+                    itemObj.addProperty("amount", item.getAmount());
+                    
+                    // Calculate quality based on durability
+                    if (item.getType().getMaxDurability() > 0) {
+                        int durability = item.getType().getMaxDurability() - item.getDurability();
+                        int qualityPercent = (int) ((double) durability / item.getType().getMaxDurability() * 100);
+                        itemObj.addProperty("quality", String.valueOf(qualityPercent));
+                    } else {
+                        itemObj.addProperty("quality", "100");
+                    }
+                    
+                    inventoryArray.add(itemObj);
+                }
+            }
+            
+            JsonObject response = new JsonObject();
+            response.addProperty("type", "response");
+            if (requestId != null) {
+                response.addProperty("requestId", requestId);
+            }
+            response.add("payload", inventoryArray);
+            
+            logger.info("Responding to getPlayerInventory: " + inventoryArray.size() + " items");
+            sendMessage(response);
+            
+        } catch (IllegalArgumentException e) {
+            sendErrorResponse(requestId, "Invalid gameId format");
+        }
+    }
+    
+    private void handleGetPlayerLocation(String requestId, JsonObject message) {
+        JsonObject args = parseArgsFromMessage(message);
+        
+        if (!args.has("gameId")) {
+            sendErrorResponse(requestId, "gameId parameter is required");
+            return;
+        }
+        
+        String gameId = args.get("gameId").getAsString();
+        
+        try {
+            UUID playerUUID = UUID.fromString(gameId);
+            Player player = Bukkit.getPlayer(playerUUID);
+            
+            if (player == null) {
+                sendErrorResponse(requestId, "Player not found or offline");
+                return;
+            }
+            
+            Location location = player.getLocation();
+            
+            JsonObject locationObj = new JsonObject();
+            locationObj.addProperty("x", location.getX());
+            locationObj.addProperty("y", location.getY());
+            locationObj.addProperty("z", location.getZ());
+            locationObj.addProperty("world", location.getWorld().getName());
+            
+            JsonObject response = new JsonObject();
+            response.addProperty("type", "response");
+            if (requestId != null) {
+                response.addProperty("requestId", requestId);
+            }
+            response.add("payload", locationObj);
+            
+            logger.info("Responding to getPlayerLocation: " + location.getWorld().getName() + " (" + 
+                       location.getX() + ", " + location.getY() + ", " + location.getZ() + ")");
+            sendMessage(response);
+            
+        } catch (IllegalArgumentException e) {
+            sendErrorResponse(requestId, "Invalid gameId format");
+        }
+    }
+    
+    private void handleListItems(String requestId) {
+        JsonArray itemsArray = new JsonArray();
+        
+        for (Material material : Material.values()) {
+            if (material.isItem() && !material.isAir()) {
+                JsonObject itemObj = new JsonObject();
+                itemObj.addProperty("code", material.name());
+                
+                // Format name from ENUM_CASE to "Enum Case"
+                String name = material.name().toLowerCase().replace("_", " ");
+                name = name.substring(0, 1).toUpperCase() + name.substring(1);
+                itemObj.addProperty("name", name);
+                
+                // Basic description
+                String description = "A " + name.toLowerCase();
+                if (material.isBlock()) {
+                    description = "A " + name.toLowerCase() + " block";
+                } else if (material.name().contains("SWORD") || material.name().contains("AXE") || 
+                          material.name().contains("PICKAXE") || material.name().contains("SHOVEL")) {
+                    description = "A " + name.toLowerCase() + " tool";
+                } else if (material.name().contains("HELMET") || material.name().contains("CHESTPLATE") || 
+                          material.name().contains("LEGGINGS") || material.name().contains("BOOTS")) {
+                    description = "A piece of " + name.toLowerCase() + " armor";
+                }
+                itemObj.addProperty("description", description);
+                
+                itemsArray.add(itemObj);
+            }
+        }
+        
+        JsonObject response = new JsonObject();
+        response.addProperty("type", "response");
+        if (requestId != null) {
+            response.addProperty("requestId", requestId);
+        }
+        response.add("payload", itemsArray);
+        
+        logger.info("Responding to listItems: " + itemsArray.size() + " items available");
+        sendMessage(response);
+    }
+    
+    private void handleListBans(String requestId) {
+        JsonArray bansArray = new JsonArray();
+        
+        BanList banList = Bukkit.getBanList(BanList.Type.NAME);
+        
+        for (OfflinePlayer bannedPlayer : Bukkit.getBannedPlayers()) {
+            JsonObject banObj = new JsonObject();
+            banObj.addProperty("gameId", bannedPlayer.getUniqueId().toString());
+            banObj.addProperty("name", bannedPlayer.getName());
+            
+            // Get ban details if available
+            if (banList.isBanned(bannedPlayer.getName())) {
+                String reason = banList.getBanEntry(bannedPlayer.getName()).getReason();
+                banObj.addProperty("reason", reason != null ? reason : "No reason specified");
+            } else {
+                banObj.addProperty("reason", "Banned");
+            }
+            
+            bansArray.add(banObj);
+        }
+        
+        JsonObject response = new JsonObject();
+        response.addProperty("type", "response");
+        if (requestId != null) {
+            response.addProperty("requestId", requestId);
+        }
+        response.add("payload", bansArray);
+        
+        logger.info("Responding to listBans: " + bansArray.size() + " banned players");
+        sendMessage(response);
+    }
+    
+    private void sendErrorResponse(String requestId, String errorMessage) {
+        JsonObject errorResponse = new JsonObject();
+        errorResponse.addProperty("type", "response");
+        if (requestId != null) {
+            errorResponse.addProperty("requestId", requestId);
+        }
+        errorResponse.addProperty("error", errorMessage);
+        sendMessage(errorResponse);
     }
     
     private void sendMessage(JsonObject message) {
