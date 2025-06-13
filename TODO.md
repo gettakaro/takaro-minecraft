@@ -8,38 +8,9 @@ This document tracks the remaining methods that need to be implemented for full 
 
 ## ✅ ~~executeConsoleCommand(command)~~ - IMPLEMENTED
 
-## 1. kickPlayer(player, reason)
+## ✅ ~~kickPlayer(player, reason)~~ - IMPLEMENTED
 
-**Purpose**: Disconnect a player from the server
-
-**Request Parameters**:
-- `player` (object, required): `{"gameId": "uuid"}`
-- `reason` (string, optional): Kick reason
-
-**Response**: null on success
-
-**Implementation Details**:
-```java
-private void handleKickPlayer(String requestId, JsonObject message) {
-    JsonObject args = parseArgsFromMessage(message);
-    
-    JsonObject player = args.getAsJsonObject("player");
-    String gameId = player.get("gameId").getAsString();
-    
-    // Optional reason
-    String reason = args.has("reason") ? args.get("reason").getAsString() : "Kicked by administrator";
-    
-    Player targetPlayer = Bukkit.getPlayer(UUID.fromString(gameId));
-    
-    // Kick on main thread
-    Bukkit.getScheduler().runTask(plugin, () -> {
-        targetPlayer.kickPlayer(reason);
-        sendResponse(requestId, null);
-    });
-}
-```
-
-## 2. banPlayer(player, reason, expiresAt)
+## 1. banPlayer(player, reason, expiresAt)
 
 **Purpose**: Ban a player from the server
 
@@ -80,7 +51,7 @@ private void handleBanPlayer(String requestId, JsonObject message) {
 }
 ```
 
-## 3. unbanPlayer(gameId)
+## 2. unbanPlayer(gameId)
 
 **Purpose**: Remove a player's ban
 
@@ -108,7 +79,7 @@ private void handleUnbanPlayer(String requestId, JsonObject message) {
 }
 ```
 
-## 4. shutdown()
+## 3. shutdown()
 
 **Purpose**: Gracefully shutdown the server
 
@@ -144,7 +115,7 @@ private void handleShutdown(String requestId, JsonObject message) {
 }
 ```
 
-## 5. listEntities()
+## 4. listEntities()
 
 **Purpose**: List all entities (mobs, NPCs) in the game world
 
@@ -184,7 +155,7 @@ private void handleListEntities(String requestId) {
 }
 ```
 
-## 6. listLocations()
+## 5. listLocations()
 
 **Purpose**: List notable locations/structures in the game
 
@@ -228,7 +199,7 @@ private void handleListLocations(String requestId) {
 }
 ```
 
-## 7. teleportPlayer(player, x, y, z) - ⚠️ BLOCKED
+## 6. teleportPlayer(player, x, y, z) - ⚠️ BLOCKED
 
 **Purpose**: Teleport a player to specific coordinates
 

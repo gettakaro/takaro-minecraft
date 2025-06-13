@@ -244,6 +244,9 @@ public class TakaroWebSocketClient extends WebSocketClient {
             case "executeConsoleCommand":
                 handleExecuteConsoleCommand(requestId, message);
                 break;
+            case "kickPlayer":
+                handleKickPlayer(requestId, message);
+                break;
             default:
                 // Send error for unimplemented actions
                 JsonObject errorResponse = new JsonObject();
@@ -778,6 +781,58 @@ public class TakaroWebSocketClient extends WebSocketClient {
                 sendMessage(response);
             }
         });
+    }
+    
+    private void handleKickPlayer(String requestId, JsonObject message) {
+        JsonObject args = parseArgsFromMessage(message);
+        
+        // Validate player parameter
+        if (!args.has("player")) {
+            sendErrorResponse(requestId, "player parameter is required");
+            return;
+        }
+        
+        JsonObject playerObj = args.getAsJsonObject("player");
+        if (!playerObj.has("gameId")) {
+            sendErrorResponse(requestId, "player object must contain gameId");
+            return;
+        }
+        
+        String gameId = playerObj.get("gameId").getAsString();
+        
+        // Optional reason parameter
+        String reason = args.has("reason") ? args.get("reason").getAsString() : "Kicked by administrator";
+        
+        try {
+            UUID playerUUID = UUID.fromString(gameId);
+            Player targetPlayer = Bukkit.getPlayer(playerUUID);
+            
+            if (targetPlayer == null) {
+                sendErrorResponse(requestId, "Player not found or offline");
+                return;
+            }
+            
+            logger.info("Kicking player: " + targetPlayer.getName() + " - Reason: " + reason);
+            
+            // Kick player on main thread
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                targetPlayer.kickPlayer(reason);
+                
+                // Send null response on success
+                JsonObject response = new JsonObject();
+                response.addProperty("type", "response");
+                if (requestId != null) {
+                    response.addProperty("requestId", requestId);
+                }
+                response.add("payload", null);
+                
+                logger.info("Player kicked successfully: " + targetPlayer.getName());
+                sendMessage(response);
+            });
+            
+        } catch (IllegalArgumentException e) {
+            sendErrorResponse(requestId, "Invalid gameId format");
+        }
     }
     
     private void sendErrorResponse(String requestId, String errorMessage) {
