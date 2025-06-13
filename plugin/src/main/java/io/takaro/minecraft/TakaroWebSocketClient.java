@@ -17,6 +17,7 @@ import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 
 import java.net.URI;
+import java.util.HashMap;
 import java.util.UUID;
 import java.util.logging.Logger;
 
@@ -236,6 +237,9 @@ public class TakaroWebSocketClient extends WebSocketClient {
                 break;
             case "sendMessage":
                 handleSendMessage(requestId, message);
+                break;
+            case "giveItem":
+                handleGiveItem(requestId, message);
                 break;
             default:
                 // Send error for unimplemented actions
@@ -600,6 +604,112 @@ public class TakaroWebSocketClient extends WebSocketClient {
         response.add("payload", null);
         
         sendMessage(response);
+    }
+    
+    private void handleGiveItem(String requestId, JsonObject message) {
+        JsonObject args = parseArgsFromMessage(message);
+        
+        // Parse required parameters
+        if (!args.has("player") || !args.has("item") || !args.has("amount")) {
+            sendErrorResponse(requestId, "Missing required parameters: player, item, and amount are required");
+            return;
+        }
+        
+        JsonObject playerObj = args.getAsJsonObject("player");
+        if (!playerObj.has("gameId")) {
+            sendErrorResponse(requestId, "player object must contain gameId");
+            return;
+        }
+        
+        String gameId = playerObj.get("gameId").getAsString();
+        String itemCode = args.get("item").getAsString();
+        int amount;
+        
+        try {
+            amount = args.get("amount").getAsInt();
+            if (amount <= 0) {
+                sendErrorResponse(requestId, "Amount must be greater than 0");
+                return;
+            }
+        } catch (NumberFormatException e) {
+            sendErrorResponse(requestId, "Invalid amount format");
+            return;
+        }
+        
+        // Parse optional quality parameter
+        String quality = args.has("quality") ? args.get("quality").getAsString() : null;
+        
+        try {
+            UUID playerUUID = UUID.fromString(gameId);
+            Player player = Bukkit.getPlayer(playerUUID);
+            
+            if (player == null) {
+                sendErrorResponse(requestId, "Player not found or offline");
+                return;
+            }
+            
+            // Convert item code to Material
+            Material material = Material.getMaterial(itemCode.toUpperCase());
+            if (material == null) {
+                sendErrorResponse(requestId, "Invalid item code: " + itemCode);
+                return;
+            }
+            
+            if (!material.isItem() || material.isAir()) {
+                sendErrorResponse(requestId, "Item code does not represent a valid item: " + itemCode);
+                return;
+            }
+            
+            // Create ItemStack
+            ItemStack itemStack = new ItemStack(material, amount);
+            
+            // Apply quality if applicable (for items with durability)
+            if (quality != null && material.getMaxDurability() > 0) {
+                try {
+                    // Try to parse quality as a percentage (0-100)
+                    double qualityPercent = Double.parseDouble(quality);
+                    if (qualityPercent < 0 || qualityPercent > 100) {
+                        logger.warning("Quality value out of range (0-100): " + quality);
+                        qualityPercent = Math.max(0, Math.min(100, qualityPercent));
+                    }
+                    
+                    // Calculate durability (inverse of damage)
+                    short durability = (short)(material.getMaxDurability() * (qualityPercent / 100.0));
+                    short damage = (short)(material.getMaxDurability() - durability);
+                    itemStack.setDurability(damage);
+                } catch (NumberFormatException e) {
+                    // Quality might be a string like "high", "low" - ignore for now
+                    logger.info("Non-numeric quality value provided: " + quality);
+                }
+            }
+            
+            // Add item to player inventory on main thread
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                HashMap<Integer, ItemStack> leftover = player.getInventory().addItem(itemStack);
+                
+                // Drop any items that couldn't fit in inventory
+                if (!leftover.isEmpty()) {
+                    for (ItemStack item : leftover.values()) {
+                        player.getWorld().dropItem(player.getLocation(), item);
+                    }
+                    logger.info("Player inventory full, dropped " + leftover.size() + " item stacks at player location");
+                }
+                
+                // Send success response with null payload
+                JsonObject response = new JsonObject();
+                response.addProperty("type", "response");
+                if (requestId != null) {
+                    response.addProperty("requestId", requestId);
+                }
+                response.add("payload", null);
+                
+                logger.info("Gave " + amount + " x " + material.name() + " to player " + player.getName());
+                sendMessage(response);
+            });
+            
+        } catch (IllegalArgumentException e) {
+            sendErrorResponse(requestId, "Invalid gameId format");
+        }
     }
     
     private void sendErrorResponse(String requestId, String errorMessage) {
