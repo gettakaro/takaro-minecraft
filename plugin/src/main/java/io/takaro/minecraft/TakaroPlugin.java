@@ -11,6 +11,7 @@ import java.net.URI;
 public class TakaroPlugin extends JavaPlugin {
     
     private TakaroWebSocketClient webSocketClient;
+    private TakaroEventListener eventListener;
     private boolean shuttingDown = false;
 
     @Override
@@ -21,6 +22,10 @@ public class TakaroPlugin extends JavaPlugin {
         loadConfiguration();
         
         getCommand("takaro").setExecutor(this);
+        
+        // Initialize event listener
+        eventListener = new TakaroEventListener(this);
+        getServer().getPluginManager().registerEvents(eventListener, this);
         
         initializeWebSocketConnection();
     }

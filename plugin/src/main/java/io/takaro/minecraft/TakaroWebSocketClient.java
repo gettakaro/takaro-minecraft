@@ -231,6 +231,9 @@ public class TakaroWebSocketClient extends WebSocketClient {
             case "listBans":
                 handleListBans(requestId);
                 break;
+            case "sendMessage":
+                handleSendMessage(requestId, message);
+                break;
             default:
                 // Send error for unimplemented actions
                 JsonObject errorResponse = new JsonObject();
@@ -267,19 +270,7 @@ public class TakaroWebSocketClient extends WebSocketClient {
         
         // Get all online players
         for (Player player : Bukkit.getOnlinePlayers()) {
-            JsonObject playerObj = new JsonObject();
-            
-            // Set required fields
-            playerObj.addProperty("gameId", player.getUniqueId().toString());
-            playerObj.addProperty("name", player.getName());
-            playerObj.addProperty("ping", player.getPing());
-            
-            // Set IP address if available
-            if (player.getAddress() != null && player.getAddress().getAddress() != null) {
-                playerObj.addProperty("ip", player.getAddress().getAddress().getHostAddress());
-            }
-            
-            playersArray.add(playerObj);
+            playersArray.add(createPlayerDataWithDetails(player));
         }
         
         // Create the response message
@@ -482,6 +473,69 @@ public class TakaroWebSocketClient extends WebSocketClient {
         sendMessage(response);
     }
     
+    private void handleSendMessage(String requestId, JsonObject message) {
+        JsonObject args = parseArgsFromMessage(message);
+        
+        // Check for required message parameter
+        if (!args.has("message")) {
+            sendErrorResponse(requestId, "message parameter is required");
+            return;
+        }
+        
+        String messageText = args.get("message").getAsString();
+        if (messageText == null || messageText.trim().isEmpty()) {
+            sendErrorResponse(requestId, "message cannot be empty");
+            return;
+        }
+        
+        // Format the message with Takaro prefix
+        String formattedMessage = "§a[Takaro] §f" + messageText;
+        
+        // Check if there's a recipient for private messaging
+        if (args.has("recipient")) {
+            JsonObject recipient = args.getAsJsonObject("recipient");
+            
+            if (!recipient.has("gameId")) {
+                sendErrorResponse(requestId, "recipient must contain gameId");
+                return;
+            }
+            
+            String gameId = recipient.get("gameId").getAsString();
+            
+            try {
+                UUID playerUUID = UUID.fromString(gameId);
+                Player targetPlayer = Bukkit.getPlayer(playerUUID);
+                
+                if (targetPlayer == null) {
+                    sendErrorResponse(requestId, "Player not found or offline");
+                    return;
+                }
+                
+                // Send private message to specific player
+                targetPlayer.sendMessage(formattedMessage);
+                logger.info("Sent private message to " + targetPlayer.getName() + ": " + messageText);
+                
+            } catch (IllegalArgumentException e) {
+                sendErrorResponse(requestId, "Invalid gameId format");
+                return;
+            }
+        } else {
+            // No recipient specified, broadcast to all players
+            Bukkit.broadcastMessage(formattedMessage);
+            logger.info("Broadcast message to all players: " + messageText);
+        }
+        
+        // Send success response with null payload
+        JsonObject response = new JsonObject();
+        response.addProperty("type", "response");
+        if (requestId != null) {
+            response.addProperty("requestId", requestId);
+        }
+        response.add("payload", null);
+        
+        sendMessage(response);
+    }
+    
     private void sendErrorResponse(String requestId, String errorMessage) {
         JsonObject errorResponse = new JsonObject();
         errorResponse.addProperty("type", "response");
@@ -490,6 +544,48 @@ public class TakaroWebSocketClient extends WebSocketClient {
         }
         errorResponse.addProperty("error", errorMessage);
         sendMessage(errorResponse);
+    }
+    
+    public void sendGameEvent(String eventType, JsonObject data) {
+        if (!isAuthenticated()) {
+            if (plugin.getConfig().getBoolean("takaro.logging.debug", false)) {
+                logger.warning("Cannot send game event - not authenticated");
+            }
+            return;
+        }
+        
+        JsonObject payload = new JsonObject();
+        payload.addProperty("type", eventType);
+        payload.add("data", data);
+        
+        JsonObject eventMessage = new JsonObject();
+        eventMessage.addProperty("type", "gameEvent");
+        eventMessage.add("payload", payload);
+        
+        sendMessage(eventMessage);
+        
+        if (plugin.getConfig().getBoolean("takaro.logging.debug", false)) {
+            logger.info("Sent game event: " + eventType);
+        }
+    }
+    
+    public JsonObject createPlayerData(Player player) {
+        JsonObject playerData = new JsonObject();
+        playerData.addProperty("gameId", player.getUniqueId().toString());
+        playerData.addProperty("name", player.getName());
+        playerData.addProperty("platformId", "minecraft:" + player.getUniqueId().toString());
+        return playerData;
+    }
+    
+    public JsonObject createPlayerDataWithDetails(Player player) {
+        JsonObject playerData = createPlayerData(player);
+        playerData.addProperty("ping", player.getPing());
+        
+        if (player.getAddress() != null && player.getAddress().getAddress() != null) {
+            playerData.addProperty("ip", player.getAddress().getAddress().getHostAddress());
+        }
+        
+        return playerData;
     }
     
     private void sendMessage(JsonObject message) {
