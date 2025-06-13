@@ -8,44 +8,7 @@ This document tracks the remaining methods that need to be implemented for full 
 
 ## ✅ ~~executeConsoleCommand(command)~~ - IMPLEMENTED
 
-## 1. teleportPlayer(player, x, y, z)
-
-**Purpose**: Teleport a player to specific coordinates
-
-**Request Parameters**:
-- `player` (object, required): `{"gameId": "uuid"}`
-- `x` (number, required): X coordinate
-- `y` (number, required): Y coordinate
-- `z` (number, required): Z coordinate
-
-**Response**: null on success
-
-**Implementation Details**:
-```java
-private void handleTeleportPlayer(String requestId, JsonObject message) {
-    JsonObject args = parseArgsFromMessage(message);
-    
-    JsonObject player = args.getAsJsonObject("player");
-    String gameId = player.get("gameId").getAsString();
-    
-    double x = args.get("x").getAsDouble();
-    double y = args.get("y").getAsDouble();
-    double z = args.get("z").getAsDouble();
-    
-    Player targetPlayer = Bukkit.getPlayer(UUID.fromString(gameId));
-    
-    // Teleport on main thread
-    Bukkit.getScheduler().runTask(plugin, () -> {
-        Location teleportLocation = new Location(targetPlayer.getWorld(), x, y, z);
-        targetPlayer.teleport(teleportLocation);
-        
-        // Send null response on success
-        sendResponse(requestId, null);
-    });
-}
-```
-
-## 2. kickPlayer(player, reason)
+## 1. kickPlayer(player, reason)
 
 **Purpose**: Disconnect a player from the server
 
@@ -76,7 +39,7 @@ private void handleKickPlayer(String requestId, JsonObject message) {
 }
 ```
 
-## 3. banPlayer(player, reason, expiresAt)
+## 2. banPlayer(player, reason, expiresAt)
 
 **Purpose**: Ban a player from the server
 
@@ -117,7 +80,7 @@ private void handleBanPlayer(String requestId, JsonObject message) {
 }
 ```
 
-## 4. unbanPlayer(gameId)
+## 3. unbanPlayer(gameId)
 
 **Purpose**: Remove a player's ban
 
@@ -145,7 +108,7 @@ private void handleUnbanPlayer(String requestId, JsonObject message) {
 }
 ```
 
-## 5. shutdown()
+## 4. shutdown()
 
 **Purpose**: Gracefully shutdown the server
 
@@ -181,7 +144,7 @@ private void handleShutdown(String requestId, JsonObject message) {
 }
 ```
 
-## 6. listEntities()
+## 5. listEntities()
 
 **Purpose**: List all entities (mobs, NPCs) in the game world
 
@@ -221,7 +184,7 @@ private void handleListEntities(String requestId) {
 }
 ```
 
-## 7. listLocations()
+## 6. listLocations()
 
 **Purpose**: List notable locations/structures in the game
 
@@ -262,6 +225,51 @@ private void handleListLocations(String requestId) {
         
         locationsArray.add(spawnObj);
     }
+}
+```
+
+## 7. teleportPlayer(player, x, y, z) - ⚠️ BLOCKED
+
+**Purpose**: Teleport a player to specific coordinates
+
+**Status**: ⚠️ **BLOCKED** - Waiting for Takaro dimension/world support
+
+**Note**: This method is currently blocked because Takaro does not yet support multiple dimensions/worlds. Minecraft has multiple dimensions (Overworld, Nether, End) and the teleport coordinates need to specify which world/dimension the player should be teleported to. Without this support, teleporting players could result in incorrect behavior or players being teleported to the wrong dimension.
+
+**Request Parameters**:
+- `player` (object, required): `{"gameId": "uuid"}`
+- `x` (number, required): X coordinate
+- `y` (number, required): Y coordinate
+- `z` (number, required): Z coordinate
+
+**Response**: null on success
+
+**Implementation Details** (when dimension support is available):
+```java
+private void handleTeleportPlayer(String requestId, JsonObject message) {
+    JsonObject args = parseArgsFromMessage(message);
+    
+    JsonObject player = args.getAsJsonObject("player");
+    String gameId = player.get("gameId").getAsString();
+    
+    double x = args.get("x").getAsDouble();
+    double y = args.get("y").getAsDouble();
+    double z = args.get("z").getAsDouble();
+    
+    // TODO: Add world/dimension parameter when Takaro supports it
+    // String worldName = args.get("world").getAsString();
+    
+    Player targetPlayer = Bukkit.getPlayer(UUID.fromString(gameId));
+    
+    // Teleport on main thread
+    Bukkit.getScheduler().runTask(plugin, () -> {
+        // Currently assumes current world - needs dimension support
+        Location teleportLocation = new Location(targetPlayer.getWorld(), x, y, z);
+        targetPlayer.teleport(teleportLocation);
+        
+        // Send null response on success
+        sendResponse(requestId, null);
+    });
 }
 ```
 
