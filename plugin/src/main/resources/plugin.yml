@@ -5,17 +5,8 @@ api-version: 1.21
 author: Takaro
 description: Minecraft integration for Takaro game management platform
 
-commands:
-  takaro:
-    description: Main Takaro command
-    usage: /<command> [status|reload]
-    permission: takaro.use
-    permission-message: You don't have permission to use this command.
 
 permissions:
-  takaro.use:
-    description: Allows use of basic Takaro commands
-    default: true
   takaro.admin:
     description: Allows administrative Takaro commands
     default: op

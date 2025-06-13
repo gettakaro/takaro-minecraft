@@ -3,8 +3,6 @@ package io.takaro.minecraft;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.Logger;
 import org.bukkit.Bukkit;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -24,7 +22,6 @@ public class TakaroPlugin extends JavaPlugin {
         saveDefaultConfig();
         loadConfiguration();
         
-        getCommand("takaro").setExecutor(this);
         
         // Initialize event listener
         eventListener = new TakaroEventListener(this);
@@ -81,60 +78,6 @@ public class TakaroPlugin extends JavaPlugin {
         }
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (command.getName().equalsIgnoreCase("takaro")) {
-            if (args.length == 0) {
-                sender.sendMessage("§a[Takaro] §fHello World! Plugin is running.");
-                sender.sendMessage("§a[Takaro] §fVersion: " + getDescription().getVersion());
-                
-                if (sender instanceof Player) {
-                    Player player = (Player) sender;
-                    sender.sendMessage("§a[Takaro] §fWelcome, " + player.getName() + "!");
-                }
-                
-                return true;
-            } else if (args.length == 1 && args[0].equalsIgnoreCase("status")) {
-                sender.sendMessage("§a[Takaro] §fPlugin Status: §aActive");
-                sender.sendMessage("§a[Takaro] §fPlayers Online: §e" + Bukkit.getOnlinePlayers().size());
-                
-                if (webSocketClient != null) {
-                    if (webSocketClient.isAuthenticated()) {
-                        sender.sendMessage("§a[Takaro] §fWebSocket: §aConnected & Authenticated");
-                        sender.sendMessage("§a[Takaro] §fEvents: §aEnabled");
-                    } else if (webSocketClient.isOpen()) {
-                        sender.sendMessage("§a[Takaro] §fWebSocket: §eConnected (Not Authenticated)");
-                        sender.sendMessage("§c[Takaro] §fEvents: §cDisabled (Not Authenticated)");
-                    } else {
-                        sender.sendMessage("§a[Takaro] §fWebSocket: §cDisconnected");
-                        sender.sendMessage("§c[Takaro] §fEvents: §cDisabled (No Connection)");
-                    }
-                } else {
-                    sender.sendMessage("§a[Takaro] §fWebSocket: §cNot Initialized");
-                    sender.sendMessage("§c[Takaro] §fEvents: §cDisabled (Client Not Initialized)");
-                }
-                
-                return true;
-            } else if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
-                if (!sender.hasPermission("takaro.admin")) {
-                    sender.sendMessage("§c[Takaro] You don't have permission to reload the plugin.");
-                    return true;
-                }
-                
-                reloadConfig();
-                loadConfiguration();
-                
-                if (webSocketClient != null) {
-                    webSocketClient.shutdown();
-                }
-                
-                initializeWebSocketConnection();
-                sender.sendMessage("§a[Takaro] Configuration reloaded and WebSocket reconnected.");
-                return true;
-            }
-        }
-        return false;
-    }
     
     private void loadConfiguration() {
         String identityToken = getConfig().getString("takaro.authentication.identity_token", "");
