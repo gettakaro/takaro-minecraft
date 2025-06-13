@@ -241,6 +241,9 @@ public class TakaroWebSocketClient extends WebSocketClient {
             case "giveItem":
                 handleGiveItem(requestId, message);
                 break;
+            case "executeConsoleCommand":
+                handleExecuteConsoleCommand(requestId, message);
+                break;
             default:
                 // Send error for unimplemented actions
                 JsonObject errorResponse = new JsonObject();
@@ -718,6 +721,63 @@ public class TakaroWebSocketClient extends WebSocketClient {
         } catch (IllegalArgumentException e) {
             sendErrorResponse(requestId, "Invalid gameId format");
         }
+    }
+    
+    private void handleExecuteConsoleCommand(String requestId, JsonObject message) {
+        JsonObject args = parseArgsFromMessage(message);
+        
+        if (!args.has("command")) {
+            sendErrorResponse(requestId, "command parameter is required");
+            return;
+        }
+        
+        String command = args.get("command").getAsString();
+        if (command == null || command.trim().isEmpty()) {
+            sendErrorResponse(requestId, "command cannot be empty");
+            return;
+        }
+        
+        logger.info("Executing console command: " + command);
+        
+        // Execute on main thread
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            try {
+                // Execute the command and capture success
+                boolean success = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+                
+                JsonObject payload = new JsonObject();
+                payload.addProperty("success", success);
+                // Note: Bukkit doesn't provide direct output capture, so rawResult is empty
+                payload.addProperty("rawResult", "");
+                payload.add("errorMessage", null);
+                
+                JsonObject response = new JsonObject();
+                response.addProperty("type", "response");
+                if (requestId != null) {
+                    response.addProperty("requestId", requestId);
+                }
+                response.add("payload", payload);
+                
+                logger.info("Console command executed successfully: " + command);
+                sendMessage(response);
+                
+            } catch (Exception e) {
+                JsonObject payload = new JsonObject();
+                payload.addProperty("success", false);
+                payload.addProperty("rawResult", "");
+                payload.addProperty("errorMessage", e.getMessage());
+                
+                JsonObject response = new JsonObject();
+                response.addProperty("type", "response");
+                if (requestId != null) {
+                    response.addProperty("requestId", requestId);
+                }
+                response.add("payload", payload);
+                
+                logger.warning("Console command failed: " + command + " - " + e.getMessage());
+                sendMessage(response);
+            }
+        });
     }
     
     private void sendErrorResponse(String requestId, String errorMessage) {

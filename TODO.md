@@ -6,49 +6,9 @@ This document tracks the remaining methods that need to be implemented for full 
 
 ## ✅ ~~giveItem(player, item, amount, quality)~~ - IMPLEMENTED
 
-## 1. executeConsoleCommand(command)
+## ✅ ~~executeConsoleCommand(command)~~ - IMPLEMENTED
 
-**Purpose**: Execute arbitrary console commands
-
-**Request Parameters**:
-- `command` (string, required): The command to execute
-
-**Response**:
-- `success` (boolean): Whether command executed successfully
-- `rawResult` (string, optional): Command output
-- `errorMessage` (string, nullable): Error details if failed
-
-**Implementation Details**:
-```java
-private void handleExecuteConsoleCommand(String requestId, JsonObject message) {
-    JsonObject args = parseArgsFromMessage(message);
-    String command = args.get("command").getAsString();
-    
-    // Execute on main thread and capture output
-    Bukkit.getScheduler().runTask(plugin, () -> {
-        try {
-            // Custom CommandSender to capture output
-            boolean success = Bukkit.dispatchCommand(console, command);
-            
-            JsonObject payload = new JsonObject();
-            payload.addProperty("success", success);
-            payload.addProperty("rawResult", capturedOutput);
-            payload.add("errorMessage", null);
-            
-            sendResponse(requestId, payload);
-        } catch (Exception e) {
-            JsonObject payload = new JsonObject();
-            payload.addProperty("success", false);
-            payload.add("rawResult", null);
-            payload.addProperty("errorMessage", e.getMessage());
-            
-            sendResponse(requestId, payload);
-        }
-    });
-}
-```
-
-## 2. teleportPlayer(player, x, y, z)
+## 1. teleportPlayer(player, x, y, z)
 
 **Purpose**: Teleport a player to specific coordinates
 
@@ -85,7 +45,7 @@ private void handleTeleportPlayer(String requestId, JsonObject message) {
 }
 ```
 
-## 3. kickPlayer(player, reason)
+## 2. kickPlayer(player, reason)
 
 **Purpose**: Disconnect a player from the server
 
@@ -116,7 +76,7 @@ private void handleKickPlayer(String requestId, JsonObject message) {
 }
 ```
 
-## 4. banPlayer(player, reason, expiresAt)
+## 3. banPlayer(player, reason, expiresAt)
 
 **Purpose**: Ban a player from the server
 
@@ -157,7 +117,7 @@ private void handleBanPlayer(String requestId, JsonObject message) {
 }
 ```
 
-## 5. unbanPlayer(gameId)
+## 4. unbanPlayer(gameId)
 
 **Purpose**: Remove a player's ban
 
@@ -185,7 +145,7 @@ private void handleUnbanPlayer(String requestId, JsonObject message) {
 }
 ```
 
-## 6. shutdown()
+## 5. shutdown()
 
 **Purpose**: Gracefully shutdown the server
 
@@ -221,7 +181,7 @@ private void handleShutdown(String requestId, JsonObject message) {
 }
 ```
 
-## 7. listEntities()
+## 6. listEntities()
 
 **Purpose**: List all entities (mobs, NPCs) in the game world
 
@@ -261,7 +221,7 @@ private void handleListEntities(String requestId) {
 }
 ```
 
-## 8. listLocations()
+## 7. listLocations()
 
 **Purpose**: List notable locations/structures in the game
 
