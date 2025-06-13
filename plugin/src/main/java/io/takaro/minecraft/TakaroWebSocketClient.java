@@ -1,8 +1,10 @@
 package io.takaro.minecraft;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
@@ -206,6 +208,9 @@ public class TakaroWebSocketClient extends WebSocketClient {
             case "testReachability":
                 handleTestReachability(requestId);
                 break;
+            case "getPlayers":
+                handleGetPlayers(requestId);
+                break;
             default:
                 // Send error for unimplemented actions
                 JsonObject errorResponse = new JsonObject();
@@ -233,6 +238,39 @@ public class TakaroWebSocketClient extends WebSocketClient {
         response.add("payload", payload);
         
         logger.info("Responding to testReachability: connectable=true");
+        sendMessage(response);
+    }
+    
+    private void handleGetPlayers(String requestId) {
+        // Create the payload array of player objects
+        JsonArray playersArray = new JsonArray();
+        
+        // Get all online players
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            JsonObject playerObj = new JsonObject();
+            
+            // Set required fields
+            playerObj.addProperty("gameId", player.getUniqueId().toString());
+            playerObj.addProperty("name", player.getName());
+            playerObj.addProperty("ping", player.getPing());
+            
+            // Set IP address if available
+            if (player.getAddress() != null && player.getAddress().getAddress() != null) {
+                playerObj.addProperty("ip", player.getAddress().getAddress().getHostAddress());
+            }
+            
+            playersArray.add(playerObj);
+        }
+        
+        // Create the response message
+        JsonObject response = new JsonObject();
+        response.addProperty("type", "response");
+        if (requestId != null) {
+            response.addProperty("requestId", requestId);
+        }
+        response.add("payload", playersArray);
+        
+        logger.info("Responding to getPlayers: " + playersArray.size() + " players online");
         sendMessage(response);
     }
     
