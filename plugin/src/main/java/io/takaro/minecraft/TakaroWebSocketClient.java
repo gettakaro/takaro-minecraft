@@ -562,32 +562,40 @@ public class TakaroWebSocketClient extends WebSocketClient {
         String formattedMessage = "§a[Takaro] §f" + messageText;
         
         // Check if there's a recipient for private messaging
-        if (args.has("recipient")) {
-            JsonObject recipient = args.getAsJsonObject("recipient");
+        if (args.has("opts")) {
+            JsonObject opts = args.getAsJsonObject("opts");
             
-            if (!recipient.has("gameId")) {
-                sendErrorResponse(requestId, "recipient must contain gameId");
-                return;
-            }
-            
-            String gameId = recipient.get("gameId").getAsString();
-            
-            try {
-                UUID playerUUID = UUID.fromString(gameId);
-                Player targetPlayer = Bukkit.getPlayer(playerUUID);
+            if (opts.has("recipient")) {
+                JsonObject recipient = opts.getAsJsonObject("recipient");
                 
-                if (targetPlayer == null) {
-                    sendErrorResponse(requestId, "Player not found or offline");
+                if (!recipient.has("gameId")) {
+                    sendErrorResponse(requestId, "recipient must contain gameId");
                     return;
                 }
                 
-                // Send private message to specific player
-                targetPlayer.sendMessage(formattedMessage);
-                logger.info("Sent private message to " + targetPlayer.getName() + ": " + messageText);
+                String gameId = recipient.get("gameId").getAsString();
                 
-            } catch (IllegalArgumentException e) {
-                sendErrorResponse(requestId, "Invalid gameId format");
-                return;
+                try {
+                    UUID playerUUID = UUID.fromString(gameId);
+                    Player targetPlayer = Bukkit.getPlayer(playerUUID);
+                    
+                    if (targetPlayer == null) {
+                        sendErrorResponse(requestId, "Player not found or offline");
+                        return;
+                    }
+                    
+                    // Send private message to specific player
+                    targetPlayer.sendMessage(formattedMessage);
+                    logger.info("Sent private message to " + targetPlayer.getName() + ": " + messageText);
+                    
+                } catch (IllegalArgumentException e) {
+                    sendErrorResponse(requestId, "Invalid gameId format");
+                    return;
+                }
+            } else {
+                // opts provided but no recipient - broadcast
+                Bukkit.broadcastMessage(formattedMessage);
+                logger.info("Broadcast message to all players: " + messageText);
             }
         } else {
             // No recipient specified, broadcast to all players

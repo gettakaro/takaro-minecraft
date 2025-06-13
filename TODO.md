@@ -6,91 +6,7 @@ This document tracks the remaining methods that need to be implemented for full 
 
 ## ✅ ~~giveItem(player, item, amount, quality)~~ - IMPLEMENTED
 
-## 1. listEntities()
-
-**Purpose**: List all entities (mobs, NPCs) in the game world
-
-**Request Parameters**: None
-
-**Response**: Array of entity objects with:
-- `code` (string, required): Unique entity identifier
-- `name` (string, required): Display name
-- `description` (string, optional): Entity description
-- `type` (string, optional): "friendly" or "hostile"
-- `metadata` (object, optional): Additional game-specific data
-
-**Implementation Details**:
-```java
-private void handleListEntities(String requestId) {
-    JsonArray entitiesArray = new JsonArray();
-    
-    // Get unique entity types from all worlds
-    Set<EntityType> processedTypes = new HashSet<>();
-    
-    for (World world : Bukkit.getWorlds()) {
-        for (LivingEntity entity : world.getLivingEntities()) {
-            if (entity instanceof Player || processedTypes.contains(entity.getType())) continue;
-            
-            JsonObject entityObj = new JsonObject();
-            entityObj.addProperty("code", entity.getType().name());
-            entityObj.addProperty("name", formatEntityName(entity.getType()));
-            entityObj.addProperty("description", getEntityDescription(entity.getType()));
-            
-            // Determine if hostile or friendly
-            entityObj.addProperty("type", isHostile(entity) ? "hostile" : "friendly");
-            
-            entitiesArray.add(entityObj);
-            processedTypes.add(entity.getType());
-        }
-    }
-}
-```
-
-## 3. listLocations()
-
-**Purpose**: List notable locations/structures in the game
-
-**Request Parameters**: None
-
-**Response**: Array of location objects with:
-- `name` (string, required): Location name
-- `code` (string, required): Unique identifier
-- For circular locations:
-  - `position` (object): `{"x": number, "y": number, "z": number}`
-  - `radius` (number)
-- For rectangular locations:
-  - `position` (object): `{"x": number, "y": number, "z": number}`
-  - `sizeX` (number)
-  - `sizeY` (number)
-  - `sizeZ` (number)
-- `metadata` (object, optional)
-
-**Implementation Details**:
-```java
-private void handleListLocations(String requestId) {
-    JsonArray locationsArray = new JsonArray();
-    
-    // Add spawn points as circular locations
-    for (World world : Bukkit.getWorlds()) {
-        Location spawn = world.getSpawnLocation();
-        JsonObject spawnObj = new JsonObject();
-        spawnObj.addProperty("name", world.getName() + " Spawn");
-        spawnObj.addProperty("code", "spawn_" + world.getName());
-        
-        JsonObject position = new JsonObject();
-        position.addProperty("x", spawn.getX());
-        position.addProperty("y", spawn.getY());
-        position.addProperty("z", spawn.getZ());
-        spawnObj.add("position", position);
-        
-        spawnObj.addProperty("radius", 50); // 50 block radius around spawn
-        
-        locationsArray.add(spawnObj);
-    }
-}
-```
-
-## 4. executeConsoleCommand(command)
+## 1. executeConsoleCommand(command)
 
 **Purpose**: Execute arbitrary console commands
 
@@ -132,7 +48,7 @@ private void handleExecuteConsoleCommand(String requestId, JsonObject message) {
 }
 ```
 
-## 5. teleportPlayer(player, x, y, z)
+## 2. teleportPlayer(player, x, y, z)
 
 **Purpose**: Teleport a player to specific coordinates
 
@@ -169,7 +85,7 @@ private void handleTeleportPlayer(String requestId, JsonObject message) {
 }
 ```
 
-## 6. kickPlayer(player, reason)
+## 3. kickPlayer(player, reason)
 
 **Purpose**: Disconnect a player from the server
 
@@ -200,7 +116,7 @@ private void handleKickPlayer(String requestId, JsonObject message) {
 }
 ```
 
-## 7. banPlayer(player, reason, expiresAt)
+## 4. banPlayer(player, reason, expiresAt)
 
 **Purpose**: Ban a player from the server
 
@@ -241,7 +157,7 @@ private void handleBanPlayer(String requestId, JsonObject message) {
 }
 ```
 
-## 8. unbanPlayer(gameId)
+## 5. unbanPlayer(gameId)
 
 **Purpose**: Remove a player's ban
 
@@ -269,7 +185,7 @@ private void handleUnbanPlayer(String requestId, JsonObject message) {
 }
 ```
 
-## 9. shutdown()
+## 6. shutdown()
 
 **Purpose**: Gracefully shutdown the server
 
@@ -302,6 +218,90 @@ private void handleShutdown(String requestId, JsonObject message) {
     }, 600L); // 30 seconds = 600 ticks
     
     sendResponse(requestId, null);
+}
+```
+
+## 7. listEntities()
+
+**Purpose**: List all entities (mobs, NPCs) in the game world
+
+**Request Parameters**: None
+
+**Response**: Array of entity objects with:
+- `code` (string, required): Unique entity identifier
+- `name` (string, required): Display name
+- `description` (string, optional): Entity description
+- `type` (string, optional): "friendly" or "hostile"
+- `metadata` (object, optional): Additional game-specific data
+
+**Implementation Details**:
+```java
+private void handleListEntities(String requestId) {
+    JsonArray entitiesArray = new JsonArray();
+    
+    // Get unique entity types from all worlds
+    Set<EntityType> processedTypes = new HashSet<>();
+    
+    for (World world : Bukkit.getWorlds()) {
+        for (LivingEntity entity : world.getLivingEntities()) {
+            if (entity instanceof Player || processedTypes.contains(entity.getType())) continue;
+            
+            JsonObject entityObj = new JsonObject();
+            entityObj.addProperty("code", entity.getType().name());
+            entityObj.addProperty("name", formatEntityName(entity.getType()));
+            entityObj.addProperty("description", getEntityDescription(entity.getType()));
+            
+            // Determine if hostile or friendly
+            entityObj.addProperty("type", isHostile(entity) ? "hostile" : "friendly");
+            
+            entitiesArray.add(entityObj);
+            processedTypes.add(entity.getType());
+        }
+    }
+}
+```
+
+## 8. listLocations()
+
+**Purpose**: List notable locations/structures in the game
+
+**Request Parameters**: None
+
+**Response**: Array of location objects with:
+- `name` (string, required): Location name
+- `code` (string, required): Unique identifier
+- For circular locations:
+  - `position` (object): `{"x": number, "y": number, "z": number}`
+  - `radius` (number)
+- For rectangular locations:
+  - `position` (object): `{"x": number, "y": number, "z": number}`
+  - `sizeX` (number)
+  - `sizeY` (number)
+  - `sizeZ` (number)
+- `metadata` (object, optional)
+
+**Implementation Details**:
+```java
+private void handleListLocations(String requestId) {
+    JsonArray locationsArray = new JsonArray();
+    
+    // Add spawn points as circular locations
+    for (World world : Bukkit.getWorlds()) {
+        Location spawn = world.getSpawnLocation();
+        JsonObject spawnObj = new JsonObject();
+        spawnObj.addProperty("name", world.getName() + " Spawn");
+        spawnObj.addProperty("code", "spawn_" + world.getName());
+        
+        JsonObject position = new JsonObject();
+        position.addProperty("x", spawn.getX());
+        position.addProperty("y", spawn.getY());
+        position.addProperty("z", spawn.getZ());
+        spawnObj.add("position", position);
+        
+        spawnObj.addProperty("radius", 50); // 50 block radius around spawn
+        
+        locationsArray.add(spawnObj);
+    }
 }
 ```
 
