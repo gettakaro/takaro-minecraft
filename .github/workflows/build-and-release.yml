@@ -1,0 +1,171 @@
+name: Build and Release
+
+on:
+  push:
+    branches: ['*']
+    tags: ['*']
+  pull_request:
+    branches: [main]
+
+env:
+  JAVA_VERSION: '21'
+  MAVEN_OPTS: '-Dmaven.repo.local=.m2/repository'
+
+jobs:
+  build:
+    name: Build Plugin
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: ${{ env.JAVA_VERSION }}
+        
+    - name: Cache Maven dependencies
+      uses: actions/cache@v4
+      with:
+        path: .m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+          
+    - name: Cache Docker layers
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+          
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        cache-from: type=local,src=/tmp/.buildx-cache
+        cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+        
+    - name: Build plugin
+      run: |
+        echo "Building Takaro Minecraft Plugin..."
+        docker-compose -f docker-compose.build.yml build
+        docker-compose -f docker-compose.build.yml run --rm maven-build
+        
+    - name: Move cache
+      run: |
+        rm -rf /tmp/.buildx-cache
+        mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+        
+    - name: Check build output
+      run: |
+        if [ ! -f plugin/target/takaro-minecraft-1.0.0.jar ]; then
+          echo "❌ Build failed: JAR file not found"
+          exit 1
+        fi
+        echo "✅ Build successful: JAR file created"
+        ls -la plugin/target/
+        
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: takaro-minecraft-jar
+        path: plugin/target/takaro-minecraft-1.0.0.jar
+        retention-days: 90
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download build artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: takaro-minecraft-jar
+        path: ./artifacts/
+        
+    - name: Determine release info
+      id: release_info
+      run: |
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          # Tagged release
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "release_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          echo "📦 Creating tagged release: $TAG_NAME"
+        else
+          # Main branch release
+          COMMIT_SHORT=${GITHUB_SHA:0:7}
+          RELEASE_DATE=$(date +%Y-%m-%d)
+          RELEASE_NAME="${RELEASE_DATE}-${COMMIT_SHORT}"
+          echo "release_name=$RELEASE_NAME" >> $GITHUB_OUTPUT
+          echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          echo "📦 Creating automatic release: $RELEASE_NAME"
+        fi
+        
+    - name: Get commit messages for release notes
+      id: release_notes
+      run: |
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          # For tags, get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            COMMITS=$(git log --oneline $LAST_TAG..HEAD --pretty=format:"- %s (%h)")
+          else
+            COMMITS=$(git log --oneline -10 --pretty=format:"- %s (%h)")
+          fi
+        else
+          # For main branch, get last 10 commits
+          COMMITS=$(git log --oneline -10 --pretty=format:"- %s (%h)")
+        fi
+        
+        # Create release notes
+        cat > release_notes.md << 'EOF'
+        ## Takaro Minecraft Plugin
+        
+        This release contains the latest version of the Takaro Minecraft integration plugin.
+        
+        ### Recent Changes:
+        $COMMITS
+        
+        ### Installation:
+        1. Download `takaro-minecraft-1.0.0.jar`
+        2. Place it in your Minecraft server's `plugins/` directory
+        3. Configure the plugin as described in the README
+        4. Restart your server
+        
+        ### Requirements:
+        - Minecraft Server 1.21.5+ (Spigot/Paper)
+        - Java 21+
+        - Valid Takaro authentication tokens
+        EOF
+        
+        # Replace the placeholder with actual commits
+        sed -i "s|\$COMMITS|$COMMITS|g" release_notes.md
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.release_info.outputs.release_name }}
+        name: "Takaro Minecraft Plugin ${{ steps.release_info.outputs.release_name }}"
+        body_path: release_notes.md
+        files: |
+          artifacts/takaro-minecraft-1.0.0.jar
+        prerelease: ${{ steps.release_info.outputs.is_prerelease }}
+        make_latest: ${{ !fromJSON(steps.release_info.outputs.is_prerelease) }}
+        generate_release_notes: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Release Summary
+      run: |
+        echo "🎉 Release created successfully!"
+        echo "📋 Release: ${{ steps.release_info.outputs.release_name }}"
+        echo "🔗 Check releases: ${{ github.server_url }}/${{ github.repository }}/releases"
