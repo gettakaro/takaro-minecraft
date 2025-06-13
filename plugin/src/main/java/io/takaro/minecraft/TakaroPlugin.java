@@ -6,19 +6,34 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.net.URI;
+
 public class TakaroPlugin extends JavaPlugin {
+    
+    private TakaroWebSocketClient webSocketClient;
+    private boolean shuttingDown = false;
 
     @Override
     public void onEnable() {
         getLogger().info("Takaro Minecraft Plugin has been enabled!");
-        getLogger().info("Hello World from Takaro!");
+        
+        saveDefaultConfig();
+        loadConfiguration();
         
         getCommand("takaro").setExecutor(this);
+        
+        initializeWebSocketConnection();
     }
 
     @Override
     public void onDisable() {
         getLogger().info("Takaro Minecraft Plugin has been disabled!");
+        shuttingDown = true;
+        
+        if (webSocketClient != null) {
+            webSocketClient.shutdown();
+            webSocketClient = null;
+        }
     }
 
     @Override
@@ -37,9 +52,92 @@ public class TakaroPlugin extends JavaPlugin {
             } else if (args.length == 1 && args[0].equalsIgnoreCase("status")) {
                 sender.sendMessage("§a[Takaro] §fPlugin Status: §aActive");
                 sender.sendMessage("§a[Takaro] §fPlayers Online: §e" + Bukkit.getOnlinePlayers().size());
+                
+                if (webSocketClient != null) {
+                    if (webSocketClient.isAuthenticated()) {
+                        sender.sendMessage("§a[Takaro] §fWebSocket: §aConnected & Authenticated");
+                    } else if (webSocketClient.isOpen()) {
+                        sender.sendMessage("§a[Takaro] §fWebSocket: §eConnected (Not Authenticated)");
+                    } else {
+                        sender.sendMessage("§a[Takaro] §fWebSocket: §cDisconnected");
+                    }
+                } else {
+                    sender.sendMessage("§a[Takaro] §fWebSocket: §cNot Initialized");
+                }
+                
+                return true;
+            } else if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
+                if (!sender.hasPermission("takaro.admin")) {
+                    sender.sendMessage("§c[Takaro] You don't have permission to reload the plugin.");
+                    return true;
+                }
+                
+                reloadConfig();
+                loadConfiguration();
+                
+                if (webSocketClient != null) {
+                    webSocketClient.shutdown();
+                }
+                
+                initializeWebSocketConnection();
+                sender.sendMessage("§a[Takaro] Configuration reloaded and WebSocket reconnected.");
                 return true;
             }
         }
         return false;
+    }
+    
+    private void loadConfiguration() {
+        String identityToken = getConfig().getString("takaro.authentication.identity_token", "");
+        if (identityToken.isEmpty()) {
+            identityToken = getServer().getName();
+            getConfig().set("takaro.authentication.identity_token", identityToken);
+            saveConfig();
+            getLogger().info("Set default identity token to server name: " + identityToken);
+        }
+        
+        String registrationToken = getConfig().getString("takaro.authentication.registration_token", "");
+        if (registrationToken.isEmpty()) {
+            getLogger().warning("Registration token is not set. Please configure it in config.yml");
+        }
+        
+        getLogger().info("Configuration loaded. Identity: " + identityToken);
+    }
+    
+    private void initializeWebSocketConnection() {
+        String url = getConfig().getString("takaro.websocket.url", "wss://connect.takaro.io/");
+        String identityToken = getConfig().getString("takaro.authentication.identity_token", getServer().getName());
+        String registrationToken = getConfig().getString("takaro.authentication.registration_token", "");
+        
+        try {
+            URI serverUri = new URI(url);
+            webSocketClient = new TakaroWebSocketClient(this, serverUri, identityToken, registrationToken);
+            
+            Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
+                try {
+                    webSocketClient.connect();
+                    getLogger().info("Connecting to Takaro WebSocket: " + url);
+                } catch (Exception e) {
+                    getLogger().severe("Failed to connect to Takaro WebSocket: " + e.getMessage());
+                    if (getConfig().getBoolean("takaro.logging.debug", false)) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+            
+        } catch (Exception e) {
+            getLogger().severe("Failed to initialize WebSocket connection: " + e.getMessage());
+            if (getConfig().getBoolean("takaro.logging.debug", false)) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    public boolean isShuttingDown() {
+        return shuttingDown;
+    }
+    
+    public TakaroWebSocketClient getWebSocketClient() {
+        return webSocketClient;
     }
 }

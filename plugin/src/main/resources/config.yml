@@ -1,0 +1,30 @@
+# Takaro Minecraft Plugin Configuration
+
+takaro:
+  websocket:
+    # WebSocket URL for Takaro connection
+    url: "wss://connect.takaro.io/"
+
+    # Reconnection settings
+    reconnect:
+      enabled: true
+      initial_delay: 5000 # Initial reconnect delay in milliseconds
+      max_delay: 300000 # Maximum reconnect delay in milliseconds
+      backoff_multiplier: 2.0
+      max_attempts: -1 # -1 for unlimited attempts
+
+  authentication:
+    # Identity token - unique identifier for this server instance
+    # Default will be set to the server name from server.properties
+    identity_token: ""
+
+    # Registration token for authentication with Takaro
+    # This should be obtained from your Takaro dashboard
+    registration_token: ""
+
+  logging:
+    # Enable debug logging for WebSocket connections
+    debug: false
+
+    # Log all incoming/outgoing messages (for debugging)
+    log_messages: false

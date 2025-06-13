@@ -97,14 +97,17 @@ Based on the specification at https://docs-1881.edge.takaro.dev/advanced/adding-
 ✅ Hello World command (/takaro)
 ✅ Build and deployment pipeline
 ✅ Docker development environment
+✅ WebSocket client (Java-WebSocket library)
+✅ Takaro authentication (identity + registration tokens)
+✅ Configuration management (config.yml with WebSocket URL, tokens, logging)
+✅ Error handling and recovery (reconnection logic, exponential backoff)
+✅ Basic request handling (testReachability requests received)
 
-🔲 WebSocket client
-🔲 Takaro authentication
-🔲 Player data methods
-🔲 Game commands implementation
-🔲 Event streaming
-🔲 Configuration management
-🔲 Error handling and recovery
+🔲 Player data methods (getPlayer, getPlayers, getPlayerLocation, getPlayerInventory)
+🔲 Game commands implementation (sendMessage, teleportPlayer, kickPlayer, banPlayer)
+🔲 Event streaming (player-connected, player-disconnected, chat-message, etc.)
+🔲 Item and entity listing (listItems, listEntities)
+🔲 Proper request response handling (currently sending error responses)
 
 ## Testing Guidelines
 
@@ -130,16 +133,23 @@ Based on the specification at https://docs-1881.edge.takaro.dev/advanced/adding-
 - Check permissions in plugin.yml
 - Verify command executor is set in onEnable()
 
+### WebSocket Connection Issues
+- Check server-side config.yml for correct URL and tokens
+- Use `/takaro status` to verify connection state
+- Use `/takaro reload` to restart WebSocket connection
+- Enable debug logging: `takaro.logging.debug: true` in config.yml
+- Check server logs for authentication errors
+
 ## Next Steps
 
-1. Implement WebSocket client for Takaro connection
-2. Add configuration file for server credentials
-3. Implement player data collection methods
-4. Add event listeners for required game events
-5. Create command handlers for Takaro requests
-6. Add robust error handling and reconnection logic
-7. Implement rate limiting and request queuing
-8. Add comprehensive logging system
+1. Implement proper testReachability response (currently sending error)
+2. Implement player data collection methods (getPlayer, getPlayers, etc.)
+3. Add event listeners for required game events (player join/leave, chat, death)
+4. Create command handlers for Takaro requests (teleport, kick, ban, sendMessage)
+5. Implement item and entity listing methods
+6. Add rate limiting and request queuing
+7. Add comprehensive unit tests
+8. Performance optimization and monitoring
 
 ## Additional Notes
 
@@ -149,3 +159,7 @@ Based on the specification at https://docs-1881.edge.takaro.dev/advanced/adding-
 - Keep external dependencies minimal
 - Document all public methods
 - Add unit tests for critical components
+- User manages config.yml on server side - do not overwrite
+- WebSocket authentication uses nested payload structure
+- Server is successfully receiving testReachability requests from Takaro
+- Current Server ID: 50a759df-4883-490c-a8c8-9fae2bb3d151
