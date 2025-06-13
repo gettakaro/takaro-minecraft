@@ -177,3 +177,7 @@ Based on the specification at https://docs-1881.edge.takaro.dev/advanced/adding-
 ## Memory Notes
 
 - If you have doubts about what the structure of data should be, refer to the docs at https://docs-1881.edge.takaro.dev/advanced/adding-support-for-a-new-game/#testreachability
+
+## AI Development Guidelines
+
+- Whenever you finish a task, be sure to mark it as done in the TODO file

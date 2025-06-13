@@ -10,6 +10,7 @@ import org.bukkit.BanList;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitTask;
@@ -17,6 +18,9 @@ import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 
 import java.net.URI;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -246,6 +250,15 @@ public class TakaroWebSocketClient extends WebSocketClient {
                 break;
             case "kickPlayer":
                 handleKickPlayer(requestId, message);
+                break;
+            case "banPlayer":
+                handleBanPlayer(requestId, message);
+                break;
+            case "unbanPlayer":
+                handleUnbanPlayer(requestId, message);
+                break;
+            case "shutdown":
+                handleShutdown(requestId, message);
                 break;
             default:
                 // Send error for unimplemented actions
@@ -833,6 +846,193 @@ public class TakaroWebSocketClient extends WebSocketClient {
         } catch (IllegalArgumentException e) {
             sendErrorResponse(requestId, "Invalid gameId format");
         }
+    }
+    
+    private void handleBanPlayer(String requestId, JsonObject message) {
+        JsonObject args = parseArgsFromMessage(message);
+        
+        // Validate player parameter
+        if (!args.has("player")) {
+            sendErrorResponse(requestId, "player parameter is required");
+            return;
+        }
+        
+        JsonObject playerObj = args.getAsJsonObject("player");
+        if (!playerObj.has("gameId")) {
+            sendErrorResponse(requestId, "player object must contain gameId");
+            return;
+        }
+        
+        String gameId = playerObj.get("gameId").getAsString();
+        
+        // Optional parameters
+        final String reason = args.has("reason") ? args.get("reason").getAsString() : "Banned by administrator";
+        
+        final Date expirationDate;
+        if (args.has("expiresAt")) {
+            String expiresAt = args.get("expiresAt").getAsString();
+            try {
+                expirationDate = parseISO8601Date(expiresAt);
+            } catch (ParseException e) {
+                sendErrorResponse(requestId, "Invalid expiresAt date format. Expected ISO 8601 format.");
+                return;
+            }
+        } else {
+            expirationDate = null;
+        }
+        
+        try {
+            UUID playerUUID = UUID.fromString(gameId);
+            final OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(playerUUID);
+            
+            if (targetPlayer.getName() == null) {
+                sendErrorResponse(requestId, "Player not found");
+                return;
+            }
+            
+            logger.info("Banning player: " + targetPlayer.getName() + " - Reason: " + reason + 
+                       (expirationDate != null ? " - Expires: " + expirationDate : " - Permanent"));
+            
+            // Ban player on main thread
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                BanList banList = Bukkit.getBanList(BanList.Type.NAME);
+                banList.addBan(targetPlayer.getName(), reason, expirationDate, "Takaro");
+                
+                // If player is currently online, kick them
+                if (targetPlayer.isOnline()) {
+                    Player onlinePlayer = targetPlayer.getPlayer();
+                    if (onlinePlayer != null) {
+                        onlinePlayer.kickPlayer("You have been banned: " + reason);
+                    }
+                }
+                
+                // Send null response on success
+                JsonObject response = new JsonObject();
+                response.addProperty("type", "response");
+                if (requestId != null) {
+                    response.addProperty("requestId", requestId);
+                }
+                response.add("payload", null);
+                
+                logger.info("Player banned successfully: " + targetPlayer.getName());
+                sendMessage(response);
+            });
+            
+        } catch (IllegalArgumentException e) {
+            sendErrorResponse(requestId, "Invalid gameId format");
+        }
+    }
+    
+    private Date parseISO8601Date(String dateString) throws ParseException {
+        // Handle ISO 8601 format: 2024-01-15T10:30:00Z or 2024-01-15T10:30:00.123Z
+        SimpleDateFormat[] formats = {
+            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'"),
+            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"),
+            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX"),
+            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX")
+        };
+        
+        for (SimpleDateFormat format : formats) {
+            try {
+                return format.parse(dateString);
+            } catch (ParseException e) {
+                // Try next format
+            }
+        }
+        
+        throw new ParseException("Unable to parse date: " + dateString, 0);
+    }
+    
+    private void handleUnbanPlayer(String requestId, JsonObject message) {
+        JsonObject args = parseArgsFromMessage(message);
+        
+        // Validate gameId parameter
+        if (!args.has("gameId")) {
+            sendErrorResponse(requestId, "gameId parameter is required");
+            return;
+        }
+        
+        String gameId = args.get("gameId").getAsString();
+        if (gameId == null || gameId.trim().isEmpty()) {
+            sendErrorResponse(requestId, "gameId cannot be empty");
+            return;
+        }
+        
+        try {
+            UUID playerUUID = UUID.fromString(gameId);
+            final OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(playerUUID);
+            
+            if (targetPlayer.getName() == null) {
+                sendErrorResponse(requestId, "Player not found");
+                return;
+            }
+            
+            logger.info("Unbanning player: " + targetPlayer.getName());
+            
+            // Unban player on main thread
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                BanList banList = Bukkit.getBanList(BanList.Type.NAME);
+                
+                if (banList.isBanned(targetPlayer.getName())) {
+                    banList.pardon(targetPlayer.getName());
+                    
+                    // Send null response on success
+                    JsonObject response = new JsonObject();
+                    response.addProperty("type", "response");
+                    if (requestId != null) {
+                        response.addProperty("requestId", requestId);
+                    }
+                    response.add("payload", null);
+                    
+                    logger.info("Player unbanned successfully: " + targetPlayer.getName());
+                    sendMessage(response);
+                } else {
+                    sendErrorResponse(requestId, "Player is not banned");
+                }
+            });
+            
+        } catch (IllegalArgumentException e) {
+            sendErrorResponse(requestId, "Invalid gameId format");
+        }
+    }
+    
+    private void handleShutdown(String requestId, JsonObject message) {
+        // No parameters according to spec
+        logger.info("Server shutdown requested via Takaro");
+        
+        // Send response immediately before starting shutdown process
+        JsonObject response = new JsonObject();
+        response.addProperty("type", "response");
+        if (requestId != null) {
+            response.addProperty("requestId", requestId);
+        }
+        response.add("payload", null);
+        sendMessage(response);
+        
+        // Announce shutdown with 30 second warning
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            Bukkit.broadcastMessage("§c[Takaro] Server shutting down in 30 seconds!");
+            logger.info("Server shutdown initiated - 30 second countdown started");
+        });
+        
+        // Schedule shutdown after 30 seconds
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            logger.info("Executing server shutdown");
+            
+            // Save all worlds
+            for (World world : Bukkit.getWorlds()) {
+                logger.info("Saving world: " + world.getName());
+                world.save();
+            }
+            
+            // Kick all players with shutdown message
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                player.kickPlayer("§cServer is shutting down");
+            }
+            
+            // Shutdown server
+            Bukkit.shutdown();
+        }, 600L); // 30 seconds = 600 ticks (20 ticks per second)
     }
     
     private void sendErrorResponse(String requestId, String errorMessage) {

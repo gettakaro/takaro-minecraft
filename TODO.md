@@ -10,16 +10,24 @@ This document tracks the remaining methods that need to be implemented for full 
 
 ## ✅ ~~kickPlayer(player, reason)~~ - IMPLEMENTED
 
-## 1. banPlayer(player, reason, expiresAt)
+## ✅ ~~banPlayer(player, reason, expiresAt)~~ - IMPLEMENTED
 
-**Purpose**: Ban a player from the server
+## ✅ ~~unbanPlayer(gameId)~~ - IMPLEMENTED
 
-**Request Parameters**:
-- `player` (object, required): `{"gameId": "uuid"}`
-- `reason` (string, optional): Ban reason
-- `expiresAt` (string, optional): ISO 8601 date for ban expiration
+## ✅ ~~shutdown()~~ - IMPLEMENTED
 
-**Response**: null on success
+## 1. listEntities()
+
+**Purpose**: List all entities (mobs, NPCs) in the game world
+
+**Request Parameters**: None
+
+**Response**: Array of entity objects with:
+- `code` (string, required): Unique entity identifier
+- `name` (string, required): Display name
+- `description` (string, optional): Entity description
+- `type` (string, optional): "friendly" or "hostile"
+- `metadata` (object, optional): Additional game-specific data
 
 **Implementation Details**:
 ```java
@@ -51,7 +59,7 @@ private void handleBanPlayer(String requestId, JsonObject message) {
 }
 ```
 
-## 2. unbanPlayer(gameId)
+## 2. listLocations()
 
 **Purpose**: Remove a player's ban
 
@@ -79,7 +87,7 @@ private void handleUnbanPlayer(String requestId, JsonObject message) {
 }
 ```
 
-## 3. shutdown()
+## 3. teleportPlayer(player, x, y, z) - ⚠️ BLOCKED
 
 **Purpose**: Gracefully shutdown the server
 
@@ -115,7 +123,6 @@ private void handleShutdown(String requestId, JsonObject message) {
 }
 ```
 
-## 4. listEntities()
 
 **Purpose**: List all entities (mobs, NPCs) in the game world
 
@@ -155,7 +162,6 @@ private void handleListEntities(String requestId) {
 }
 ```
 
-## 5. listLocations()
 
 **Purpose**: List notable locations/structures in the game
 
@@ -199,7 +205,6 @@ private void handleListLocations(String requestId) {
 }
 ```
 
-## 6. teleportPlayer(player, x, y, z) - ⚠️ BLOCKED
 
 **Purpose**: Teleport a player to specific coordinates
 
