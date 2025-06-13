@@ -102,20 +102,23 @@ Based on the specification at https://docs-1881.edge.takaro.dev/advanced/adding-
 ## Current Implementation Status
 
 ✅ Basic plugin structure
-✅ Hello World command (/takaro)
 ✅ Build and deployment pipeline
 ✅ Docker development environment
 ✅ WebSocket client (Java-WebSocket library)
 ✅ Takaro authentication (identity + registration tokens)
 ✅ Configuration management (config.yml with WebSocket URL, tokens, logging)
 ✅ Error handling and recovery (reconnection logic, exponential backoff)
-✅ Basic request handling (testReachability requests received)
+✅ Full request/response handling for all implemented methods
+✅ Player data methods (getPlayer, getPlayers, getPlayerLocation, getPlayerInventory)
+✅ Game commands implementation (sendMessage, giveItem, executeConsoleCommand, kickPlayer, banPlayer, unbanPlayer, shutdown)
+✅ Event streaming (player-connected, player-disconnected, chat-message, player-death)
+✅ Item and ban listing (listItems, listBans)
+✅ Server log forwarding (TakaroLogFilter with Log4j integration)
+✅ GitHub Actions CI/CD pipeline
 
-🔲 Player data methods (getPlayer, getPlayers, getPlayerLocation, getPlayerInventory)
-🔲 Game commands implementation (sendMessage, teleportPlayer, kickPlayer, banPlayer)
-🔲 Event streaming (player-connected, player-disconnected, chat-message, etc.)
-🔲 Item and entity listing (listItems, listEntities)
-🔲 Proper request response handling (currently sending error responses)
+🔲 Entity listing (listEntities)
+🔲 Location listing (listLocations)
+🔲 Player teleportation (teleportPlayer) - **BLOCKED** waiting for Takaro dimension/world support
 
 ## Testing Guidelines
 
@@ -138,45 +141,50 @@ Based on the specification at https://docs-1881.edge.takaro.dev/advanced/adding-
 - Ensure plugin.yml is correct
 - Verify JAR is in plugins directory
 
-### Commands Not Working
+### Takaro API Issues
 
-- Ensure command is registered in plugin.yml
-- Check permissions in plugin.yml
-- Verify command executor is set in onEnable()
+- Check server logs for specific error messages with `[TakaroMinecraft]` prefix
+- Verify player UUIDs are valid when calling player-specific methods
+- Ensure server has proper permissions for file operations (for ban list access)
+- Check that all required parameters are provided in Takaro API requests
 
 ### WebSocket Connection Issues
 
 - Check server-side config.yml for correct URL and tokens
-- Use `/takaro status` to verify connection state
-- Use `/takaro reload` to restart WebSocket connection
 - Enable debug logging: `takaro.logging.debug: true` in config.yml
-- Check server logs for authentication errors
+- Enable message logging: `takaro.logging.log_messages: true` for full request/response debugging
+- Check server logs for authentication errors and connection status
+- Verify identity_token and registration_token are correctly configured
 
 ## Next Steps
 
-1. Implement proper testReachability response (currently sending error)
-2. Implement player data collection methods (getPlayer, getPlayers, etc.)
-3. Add event listeners for required game events (player join/leave, chat, death)
-4. Create command handlers for Takaro requests (teleport, kick, ban, sendMessage)
-5. Implement item and entity listing methods
-6. Add rate limiting and request queuing
-7. Add comprehensive unit tests
-8. Performance optimization and monitoring
+1. Implement listEntities method (list all mobs/NPCs in world)
+2. Implement listLocations method (list notable locations/structures)
+3. Wait for Takaro dimension/world support to implement teleportPlayer
+4. Add rate limiting and request queuing for high-traffic scenarios
+5. Add comprehensive unit tests for all implemented methods
+6. Performance optimization and monitoring
+7. Enhanced error handling for edge cases
+8. Documentation for server administrators
 
 ## Additional Notes
 
-- The plugin should be stateless where possible
-- Use Bukkit scheduler for delayed/repeated tasks
+- The plugin operates as a background service with no user-facing commands
+- Use Bukkit scheduler for delayed/repeated tasks (all API calls on main thread)
 - Prefer Spigot API over CraftBukkit internals
-- Keep external dependencies minimal
-- Document all public methods
-- Add unit tests for critical components
-- User manages config.yml on server side - do not overwrite
+- External dependencies: Java-WebSocket, Gson (shaded), Log4j (provided)
+- All public methods are documented with JavaDoc
+- User manages config.yml on server side - do not overwrite existing configs
 - WebSocket authentication uses nested payload structure
+- Server log forwarding uses Log4j filters for real-time capture
+- GitHub Actions provides automated builds and releases
 
 ## Memory Notes
 
-- If you have doubts about what the structure of data should be, refer to the docs at https://docs-1881.edge.takaro.dev/advanced/adding-support-for-a-new-game/#testreachability
+- If you have doubts about what the structure of data should be, refer to the docs at https://docs-1881.edge.takaro.dev/advanced/adding-support-for-a-new-game/
+- See TODO.md for detailed implementation status and remaining methods
+- Most Takaro API methods are now implemented - only listEntities, listLocations, and teleportPlayer remain
+- teleportPlayer is blocked waiting for Takaro to support world/dimension parameters
 
 ## AI Development Guidelines
 
