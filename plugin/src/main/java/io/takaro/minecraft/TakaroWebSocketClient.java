@@ -216,6 +216,9 @@ public class TakaroWebSocketClient extends WebSocketClient {
             case "testReachability":
                 handleTestReachability(requestId);
                 break;
+            case "getPlayer":
+                handleGetPlayer(requestId, message);
+                break;
             case "getPlayers":
                 handleGetPlayers(requestId);
                 break;
@@ -262,6 +265,69 @@ public class TakaroWebSocketClient extends WebSocketClient {
         
         logger.info("Responding to testReachability: connectable=true");
         sendMessage(response);
+    }
+    
+    private void handleGetPlayer(String requestId, JsonObject message) {
+        JsonObject args = parseArgsFromMessage(message);
+        
+        if (!args.has("gameId")) {
+            sendErrorResponse(requestId, "gameId parameter is required");
+            return;
+        }
+        
+        String gameId = args.get("gameId").getAsString();
+        
+        try {
+            UUID playerUUID = UUID.fromString(gameId);
+            Player player = Bukkit.getPlayer(playerUUID);
+            
+            if (player == null) {
+                // Return null payload when player not found
+                JsonObject response = new JsonObject();
+                response.addProperty("type", "response");
+                if (requestId != null) {
+                    response.addProperty("requestId", requestId);
+                }
+                response.add("payload", null);
+                sendMessage(response);
+                return;
+            }
+            
+            // Create player object according to spec
+            JsonObject playerData = new JsonObject();
+            
+            // Required fields
+            playerData.addProperty("gameId", player.getUniqueId().toString());
+            playerData.addProperty("name", player.getName());
+            
+            // Optional fields
+            playerData.addProperty("platformId", "minecraft:" + player.getUniqueId().toString());
+            playerData.addProperty("ping", player.getPing());
+            
+            // Add IP if available
+            if (player.getAddress() != null && player.getAddress().getAddress() != null) {
+                playerData.addProperty("ip", player.getAddress().getAddress().getHostAddress());
+            }
+            
+            // Platform-specific IDs (not applicable for Minecraft)
+            playerData.add("steamId", null);
+            playerData.add("epicOnlineServicesId", null);
+            playerData.add("xboxLiveId", null);
+            
+            // Create the response message
+            JsonObject response = new JsonObject();
+            response.addProperty("type", "response");
+            if (requestId != null) {
+                response.addProperty("requestId", requestId);
+            }
+            response.add("payload", playerData);
+            
+            logger.info("Responding to getPlayer for: " + player.getName());
+            sendMessage(response);
+            
+        } catch (IllegalArgumentException e) {
+            sendErrorResponse(requestId, "Invalid gameId format");
+        }
     }
     
     private void handleGetPlayers(String requestId) {
