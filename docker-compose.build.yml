@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  maven-build:
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+    container_name: takaro-maven-build
+    volumes:
+      - ./plugin:/build
+      - maven-cache:/build/.m2/repository
+    environment:
+      - MAVEN_OPTS=-Dmaven.repo.local=/build/.m2/repository
+
+volumes:
+  maven-cache:
+    name: takaro-maven-cache

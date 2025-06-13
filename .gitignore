@@ -1,0 +1,21 @@
+# Minecraft server data
+_data/
+
+# Build artifacts
+plugin/target/
+plugin/.m2/
+
+# Docker
+*.log
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

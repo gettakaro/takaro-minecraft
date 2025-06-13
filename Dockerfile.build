@@ -1,0 +1,10 @@
+FROM maven:3.9-eclipse-temurin-21
+
+# Set working directory
+WORKDIR /build
+
+# Set up Maven to use local repository for caching
+ENV MAVEN_OPTS="-Dmaven.repo.local=/build/.m2/repository"
+
+# Default command
+CMD ["mvn", "clean", "package"]
