@@ -9,6 +9,7 @@ This is a Minecraft Spigot plugin that integrates with the Takaro game managemen
 ## Key Technical Details
 
 ### Environment
+
 - **Java Version**: 21 (via Docker)
 - **Minecraft Version**: 1.21.5
 - **Spigot API**: 1.21.5-R0.1-SNAPSHOT
@@ -16,12 +17,14 @@ This is a Minecraft Spigot plugin that integrates with the Takaro game managemen
 - **Development OS**: Linux Mint 21.1 (Ubuntu 22.04 base)
 
 ### Docker Setup
+
 - Build environment runs in Docker container with Java 21
 - Minecraft server runs in separate container
 - RCON enabled on port 25575 (password: takaro123)
 - Server data persisted in `_data/` directory
 
 ### Development Workflow
+
 1. Code changes are made in `plugin/src/`
 2. Run `./build.sh` to build, deploy, and reload
 3. Changes take effect immediately without server restart
@@ -30,6 +33,7 @@ This is a Minecraft Spigot plugin that integrates with the Takaro game managemen
 ## Important Commands
 
 ### Building and Deployment
+
 ```bash
 # Full build, deploy, and reload
 ./build.sh
@@ -41,6 +45,7 @@ This is a Minecraft Spigot plugin that integrates with the Takaro game managemen
 ```
 
 ### Docker Management
+
 ```bash
 # Start/stop server
 docker-compose up -d
@@ -58,12 +63,14 @@ docker exec minecraft-spigot rcon-cli <command>
 Based on the specification at https://docs-1881.edge.takaro.dev/advanced/adding-support-for-a-new-game/:
 
 ### Required WebSocket Connection
+
 - Connect to: `wss://connect.takaro.io/`
 - Send identify message with tokens
 - Maintain persistent connection
 - Handle reconnection logic
 
 ### Required Methods to Implement
+
 1. `getPlayer(gameId)`
 2. `getPlayers()`
 3. `getPlayerLocation(gameId)`
@@ -76,6 +83,7 @@ Based on the specification at https://docs-1881.edge.takaro.dev/advanced/adding-
 10. `banPlayer(gameId, reason)`
 
 ### Required Events to Emit
+
 1. `player-connected`
 2. `player-disconnected`
 3. `chat-message`
@@ -120,20 +128,24 @@ Based on the specification at https://docs-1881.edge.takaro.dev/advanced/adding-
 ## Common Issues and Solutions
 
 ### Build Failures
+
 - Maven dependencies are cached in Docker volume
 - If issues persist, remove volume: `docker volume rm takaro-maven-cache`
 
 ### Plugin Not Loading
+
 - Check server logs for Java version mismatch
 - Ensure plugin.yml is correct
 - Verify JAR is in plugins directory
 
 ### Commands Not Working
+
 - Ensure command is registered in plugin.yml
 - Check permissions in plugin.yml
 - Verify command executor is set in onEnable()
 
 ### WebSocket Connection Issues
+
 - Check server-side config.yml for correct URL and tokens
 - Use `/takaro status` to verify connection state
 - Use `/takaro reload` to restart WebSocket connection
@@ -161,5 +173,7 @@ Based on the specification at https://docs-1881.edge.takaro.dev/advanced/adding-
 - Add unit tests for critical components
 - User manages config.yml on server side - do not overwrite
 - WebSocket authentication uses nested payload structure
-- Server is successfully receiving testReachability requests from Takaro
-- Current Server ID: 50a759df-4883-490c-a8c8-9fae2bb3d151
+
+## Memory Notes
+
+- If you have doubts about what the structure of data should be, refer to the docs at https://docs-1881.edge.takaro.dev/advanced/adding-support-for-a-new-game/#testreachability

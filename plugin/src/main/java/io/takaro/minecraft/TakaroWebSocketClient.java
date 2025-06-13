@@ -191,17 +191,48 @@ public class TakaroWebSocketClient extends WebSocketClient {
     
     private void handleRequest(JsonObject message) {
         String requestId = message.has("requestId") ? message.get("requestId").getAsString() : null;
-        String method = message.has("method") ? message.get("method").getAsString() : "";
         
-        logger.info("Received request: " + method + " (ID: " + requestId + ")");
+        // Extract action from payload
+        String action = "";
+        if (message.has("payload")) {
+            JsonObject payload = message.getAsJsonObject("payload");
+            action = payload.has("action") ? payload.get("action").getAsString() : "";
+        }
         
+        logger.info("Received request: " + action + " (ID: " + requestId + ")");
+        
+        // Route to specific handler based on action
+        switch (action) {
+            case "testReachability":
+                handleTestReachability(requestId);
+                break;
+            default:
+                // Send error for unimplemented actions
+                JsonObject errorResponse = new JsonObject();
+                errorResponse.addProperty("type", "response");
+                if (requestId != null) {
+                    errorResponse.addProperty("requestId", requestId);
+                }
+                errorResponse.addProperty("error", "Action not implemented: " + action);
+                sendMessage(errorResponse);
+        }
+    }
+    
+    private void handleTestReachability(String requestId) {
+        // Create the payload according to Takaro specification
+        JsonObject payload = new JsonObject();
+        payload.addProperty("connectable", true);
+        payload.add("reason", null);
+        
+        // Create the response message
         JsonObject response = new JsonObject();
         response.addProperty("type", "response");
         if (requestId != null) {
             response.addProperty("requestId", requestId);
         }
-        response.addProperty("error", "Not implemented yet");
+        response.add("payload", payload);
         
+        logger.info("Responding to testReachability: connectable=true");
         sendMessage(response);
     }
     
