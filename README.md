@@ -15,7 +15,6 @@ This plugin provides a bridge between Minecraft servers running Spigot and the T
 - **Server Log Forwarding**: All server console logs sent to Takaro in real-time
 - **Inventory & Location Tracking**: Player inventory and location data
 - **Server Management**: Remote shutdown capabilities
-- **CI/CD Pipeline**: Automated builds and releases via GitHub Actions
 
 ## Requirements
 
@@ -56,11 +55,13 @@ mod-minecraft/
 ## Quick Start
 
 1. **Start the Minecraft server:**
+
    ```bash
    docker-compose up -d
    ```
 
 2. **Build and deploy the plugin:**
+
    ```bash
    ./build.sh
    ```
@@ -102,12 +103,14 @@ The build process uses Docker to ensure consistency across different development
 ### RCON Access
 
 The server has RCON enabled for remote management:
+
 - Port: 25575
 - Password: takaro123
 
 ### Debugging
 
 Check server logs:
+
 ```bash
 docker logs minecraft-spigot -f
 ```
@@ -130,30 +133,33 @@ For implementation details, see the [Takaro documentation](https://docs-1881.edg
 The plugin uses `config.yml` for configuration. Key settings include:
 
 ### Authentication
+
 ```yaml
 takaro:
   authentication:
-    identity_token: ""          # Unique server identifier
-    registration_token: ""      # Token from Takaro dashboard
+    identity_token: "" # Unique server identifier
+    registration_token: "" # Token from Takaro dashboard
 ```
 
 ### WebSocket Connection
+
 ```yaml
 takaro:
   websocket:
     url: "wss://connect.takaro.io/"
     reconnect:
       enabled: true
-      max_attempts: -1           # Unlimited reconnection attempts
+      max_attempts: -1 # Unlimited reconnection attempts
 ```
 
 ### Logging
+
 ```yaml
 takaro:
   logging:
-    debug: false                 # Enable debug logging
-    forward_server_logs: true    # Forward server logs to Takaro
-    min_level: "INFO"           # Minimum log level to forward
+    debug: false # Enable debug logging
+    forward_server_logs: true # Forward server logs to Takaro
+    min_level: "INFO" # Minimum log level to forward
 ```
 
 ## Plugin Integration
