@@ -260,6 +260,9 @@ public class TakaroWebSocketClient extends WebSocketClient {
             case "shutdown":
                 handleShutdown(requestId, message);
                 break;
+            case "teleportPlayer":
+                handleTeleportPlayer(requestId, message);
+                break;
             default:
                 // Send error for unimplemented actions
                 JsonObject errorResponse = new JsonObject();
@@ -471,7 +474,7 @@ public class TakaroWebSocketClient extends WebSocketClient {
             locationObj.addProperty("x", location.getX());
             locationObj.addProperty("y", location.getY());
             locationObj.addProperty("z", location.getZ());
-            locationObj.addProperty("world", location.getWorld().getName());
+            locationObj.addProperty("dimension", mapWorldToDimension(location.getWorld().getName()));
             
             JsonObject response = new JsonObject();
             response.addProperty("type", "response");
@@ -1035,6 +1038,105 @@ public class TakaroWebSocketClient extends WebSocketClient {
         }, 600L); // 30 seconds = 600 ticks (20 ticks per second)
     }
     
+    private void handleTeleportPlayer(String requestId, JsonObject message) {
+        JsonObject args = parseArgsFromMessage(message);
+        
+        // Validate required parameters
+        if (!args.has("player")) {
+            sendErrorResponse(requestId, "player parameter is required");
+            return;
+        }
+        
+        JsonObject playerObj = args.getAsJsonObject("player");
+        if (!playerObj.has("gameId")) {
+            sendErrorResponse(requestId, "player object must contain gameId");
+            return;
+        }
+        
+        if (!args.has("x") || !args.has("y") || !args.has("z")) {
+            sendErrorResponse(requestId, "x, y, and z coordinates are required");
+            return;
+        }
+        
+        String gameId = playerObj.get("gameId").getAsString();
+        double x, y, z;
+        
+        try {
+            x = args.get("x").getAsDouble();
+            y = args.get("y").getAsDouble();
+            z = args.get("z").getAsDouble();
+        } catch (NumberFormatException e) {
+            sendErrorResponse(requestId, "Invalid coordinate format");
+            return;
+        }
+        
+        // Optional dimension parameter
+        String dimension = args.has("dimension") ? args.get("dimension").getAsString() : null;
+        
+        try {
+            UUID playerUUID = UUID.fromString(gameId);
+            Player targetPlayer = Bukkit.getPlayer(playerUUID);
+            
+            if (targetPlayer == null) {
+                sendErrorResponse(requestId, "Player not found or offline");
+                return;
+            }
+            
+            logger.info("Teleporting player: " + targetPlayer.getName() + " to (" + x + ", " + y + ", " + z + ")" + 
+                       (dimension != null ? " in dimension: " + dimension : ""));
+            
+            // Teleport player on main thread
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                try {
+                    World targetWorld;
+                    
+                    if (dimension != null) {
+                        targetWorld = mapDimensionToWorld(dimension);
+                        if (targetWorld == null) {
+                            sendErrorResponse(requestId, "Invalid or unavailable dimension: " + dimension);
+                            return;
+                        }
+                    } else {
+                        // Use player's current world if no dimension specified
+                        targetWorld = targetPlayer.getWorld();
+                    }
+                    
+                    Location teleportLocation = new Location(targetWorld, x, y, z);
+                    
+                    // Validate coordinates are safe (y between 0 and world height)
+                    if (y < 0 || y > targetWorld.getMaxHeight()) {
+                        sendErrorResponse(requestId, "Y coordinate out of bounds for world: " + targetWorld.getName());
+                        return;
+                    }
+                    
+                    boolean teleported = targetPlayer.teleport(teleportLocation);
+                    
+                    if (teleported) {
+                        // Send null response on success
+                        JsonObject response = new JsonObject();
+                        response.addProperty("type", "response");
+                        if (requestId != null) {
+                            response.addProperty("requestId", requestId);
+                        }
+                        response.add("payload", null);
+                        
+                        logger.info("Player teleported successfully: " + targetPlayer.getName());
+                        sendMessage(response);
+                    } else {
+                        sendErrorResponse(requestId, "Teleportation failed - location may be unsafe");
+                    }
+                    
+                } catch (Exception e) {
+                    sendErrorResponse(requestId, "Teleportation failed: " + e.getMessage());
+                    logger.warning("Teleportation error: " + e.getMessage());
+                }
+            });
+            
+        } catch (IllegalArgumentException e) {
+            sendErrorResponse(requestId, "Invalid gameId format");
+        }
+    }
+    
     private void sendErrorResponse(String requestId, String errorMessage) {
         JsonObject errorResponse = new JsonObject();
         errorResponse.addProperty("type", "response");
@@ -1154,5 +1256,61 @@ public class TakaroWebSocketClient extends WebSocketClient {
         if (isOpen() && !authenticated) {
             sendAuthenticationMessage();
         }
+    }
+    
+    /**
+     * Maps Minecraft world names to Takaro dimension names
+     * @param worldName The Minecraft world name
+     * @return The corresponding Takaro dimension name
+     */
+    private String mapWorldToDimension(String worldName) {
+        if (worldName.endsWith("_the_end")) {
+            return "end";
+        } else if (worldName.endsWith("_nether")) {
+            return "nether";
+        } else {
+            return "overworld";
+        }
+    }
+    
+    /**
+     * Maps Takaro dimension names to Minecraft world names
+     * @param dimension The Takaro dimension name
+     * @return The corresponding Minecraft world, or null if not found
+     */
+    private World mapDimensionToWorld(String dimension) {
+        if (dimension == null) {
+            return null;
+        }
+        
+        switch (dimension.toLowerCase()) {
+            case "end":
+                // Find world ending with _the_end
+                for (World world : Bukkit.getWorlds()) {
+                    if (world.getName().endsWith("_the_end")) {
+                        return world;
+                    }
+                }
+                break;
+            case "nether":
+                // Find world ending with _nether
+                for (World world : Bukkit.getWorlds()) {
+                    if (world.getName().endsWith("_nether")) {
+                        return world;
+                    }
+                }
+                break;
+            case "overworld":
+            default:
+                // Find main overworld (usually named "world")
+                for (World world : Bukkit.getWorlds()) {
+                    if (!world.getName().endsWith("_nether") && !world.getName().endsWith("_the_end")) {
+                        return world;
+                    }
+                }
+                break;
+        }
+        
+        return null;
     }
 }
