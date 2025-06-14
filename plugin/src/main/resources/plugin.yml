@@ -1,5 +1,5 @@
 name: TakaroMinecraft
-version: 1.0.0
+version: ${project.version}
 main: io.takaro.minecraft.TakaroPlugin
 api-version: 1.21
 author: Takaro

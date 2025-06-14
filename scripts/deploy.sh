@@ -1,13 +1,16 @@
 #!/bin/bash
 
-PLUGIN_JAR="plugin/target/takaro-minecraft-1.0.0.jar"
+# Find the actual JAR file
+PLUGIN_JAR=$(find plugin/target -name "takaro-minecraft-*.jar" -type f | head -n 1)
 CONTAINER_NAME="minecraft-spigot"
 
 # Check if the JAR exists
-if [ ! -f "$PLUGIN_JAR" ]; then
+if [ -z "$PLUGIN_JAR" ] || [ ! -f "$PLUGIN_JAR" ]; then
     echo "Plugin JAR not found! Run build.sh first."
     exit 1
 fi
+
+echo "Using JAR file: $PLUGIN_JAR"
 
 # Check if container is running
 if ! docker ps | grep -q "$CONTAINER_NAME"; then

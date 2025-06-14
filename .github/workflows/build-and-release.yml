@@ -42,18 +42,20 @@ jobs:
         
     - name: Check build output
       run: |
-        if [ ! -f plugin/target/takaro-minecraft-1.0.0.jar ]; then
+        JAR_FILE=$(find plugin/target -name "takaro-minecraft-*.jar" -type f | head -n 1)
+        if [ -z "$JAR_FILE" ] || [ ! -f "$JAR_FILE" ]; then
           echo "❌ Build failed: JAR file not found"
           exit 1
         fi
-        echo "✅ Build successful: JAR file created"
+        echo "✅ Build successful: JAR file created at $JAR_FILE"
         ls -la plugin/target/
+        echo "jar_file=$JAR_FILE" >> $GITHUB_ENV
         
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
       with:
         name: takaro-minecraft-jar
-        path: plugin/target/takaro-minecraft-1.0.0.jar
+        path: ${{ env.jar_file }}
         retention-days: 90
 
   release:
@@ -117,7 +119,7 @@ jobs:
         $COMMITS
         
         ### Installation:
-        1. Download `takaro-minecraft-1.0.0.jar`
+        1. Download the JAR file from this release
         2. Place it in your Minecraft server's `plugins/` directory
         3. Configure the plugin as described in the README
         4. Restart your server
@@ -138,7 +140,7 @@ jobs:
         name: "Takaro Minecraft Plugin ${{ steps.release_info.outputs.release_name }}"
         body_path: release_notes.md
         files: |
-          artifacts/takaro-minecraft-1.0.0.jar
+          artifacts/takaro-minecraft-*.jar
         prerelease: ${{ steps.release_info.outputs.is_prerelease }}
         make_latest: ${{ !fromJSON(steps.release_info.outputs.is_prerelease) }}
         generate_release_notes: false
