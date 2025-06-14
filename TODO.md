@@ -87,42 +87,25 @@ private void handleUnbanPlayer(String requestId, JsonObject message) {
 }
 ```
 
-## 3. teleportPlayer(player, x, y, z) - ⚠️ BLOCKED
+## ✅ ~~teleportPlayer(player, x, y, z, dimension)~~ - IMPLEMENTED
 
-**Purpose**: Gracefully shutdown the server
+**Purpose**: Teleport a player to specific coordinates with optional dimension support
 
-**Request Parameters**: None
+**Request Parameters**:
+- `player` (object, required): `{"gameId": "uuid"}`
+- `x` (number, required): X coordinate
+- `y` (number, required): Y coordinate
+- `z` (number, required): Z coordinate
+- `dimension` (string, optional): Target dimension ("overworld", "nether", "end")
 
 **Response**: null on success
 
-**Implementation Details**:
-```java
-private void handleShutdown(String requestId, JsonObject message) {
-    // No parameters according to spec
-    
-    // Announce shutdown with 30 second warning
-    Bukkit.broadcastMessage("[Takaro] Server shutting down in 30 seconds!");
-    
-    // Schedule shutdown
-    Bukkit.getScheduler().runTaskLater(plugin, () -> {
-        // Save all worlds
-        for (World world : Bukkit.getWorlds()) {
-            world.save();
-        }
-        
-        // Kick all players
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            player.kickPlayer("Server is shutting down");
-        }
-        
-        // Shutdown server
-        Bukkit.shutdown();
-    }, 600L); // 30 seconds = 600 ticks
-    
-    sendResponse(requestId, null);
-}
-```
+**Implementation Notes**:
+- If no dimension is specified, player stays in current world
+- Dimension mapping: "overworld" → any world not ending with "_nether" or "_the_end", "nether" → worlds ending with "_nether", "end" → worlds ending with "_the_end"
+- Includes coordinate validation and safe teleportation checks
 
+## 3. listEntities()
 
 **Purpose**: List all entities (mobs, NPCs) in the game world
 
@@ -162,6 +145,7 @@ private void handleListEntities(String requestId) {
 }
 ```
 
+## 4. listLocations()
 
 **Purpose**: List notable locations/structures in the game
 
@@ -171,10 +155,10 @@ private void handleListEntities(String requestId) {
 - `name` (string, required): Location name
 - `code` (string, required): Unique identifier
 - For circular locations:
-  - `position` (object): `{"x": number, "y": number, "z": number}`
+  - `position` (object): `{"x": number, "y": number, "z": number, "dimension": string}`
   - `radius` (number)
 - For rectangular locations:
-  - `position` (object): `{"x": number, "y": number, "z": number}`
+  - `position` (object): `{"x": number, "y": number, "z": number, "dimension": string}`
   - `sizeX` (number)
   - `sizeY` (number)
   - `sizeZ` (number)
@@ -196,56 +180,13 @@ private void handleListLocations(String requestId) {
         position.addProperty("x", spawn.getX());
         position.addProperty("y", spawn.getY());
         position.addProperty("z", spawn.getZ());
+        position.addProperty("dimension", mapWorldToDimension(world.getName()));
         spawnObj.add("position", position);
         
         spawnObj.addProperty("radius", 50); // 50 block radius around spawn
         
         locationsArray.add(spawnObj);
     }
-}
-```
-
-
-**Purpose**: Teleport a player to specific coordinates
-
-**Status**: ⚠️ **BLOCKED** - Waiting for Takaro dimension/world support
-
-**Note**: This method is currently blocked because Takaro does not yet support multiple dimensions/worlds. Minecraft has multiple dimensions (Overworld, Nether, End) and the teleport coordinates need to specify which world/dimension the player should be teleported to. Without this support, teleporting players could result in incorrect behavior or players being teleported to the wrong dimension.
-
-**Request Parameters**:
-- `player` (object, required): `{"gameId": "uuid"}`
-- `x` (number, required): X coordinate
-- `y` (number, required): Y coordinate
-- `z` (number, required): Z coordinate
-
-**Response**: null on success
-
-**Implementation Details** (when dimension support is available):
-```java
-private void handleTeleportPlayer(String requestId, JsonObject message) {
-    JsonObject args = parseArgsFromMessage(message);
-    
-    JsonObject player = args.getAsJsonObject("player");
-    String gameId = player.get("gameId").getAsString();
-    
-    double x = args.get("x").getAsDouble();
-    double y = args.get("y").getAsDouble();
-    double z = args.get("z").getAsDouble();
-    
-    // TODO: Add world/dimension parameter when Takaro supports it
-    // String worldName = args.get("world").getAsString();
-    
-    Player targetPlayer = Bukkit.getPlayer(UUID.fromString(gameId));
-    
-    // Teleport on main thread
-    Bukkit.getScheduler().runTask(plugin, () -> {
-        // Currently assumes current world - needs dimension support
-        Location teleportLocation = new Location(targetPlayer.getWorld(), x, y, z);
-        targetPlayer.teleport(teleportLocation);
-        
-        // Send null response on success
-        sendResponse(requestId, null);
-    });
 }
 ```
 

@@ -81,7 +81,7 @@ public class TakaroEventListener implements Listener {
         position.addProperty("x", player.getLocation().getX());
         position.addProperty("y", player.getLocation().getY());
         position.addProperty("z", player.getLocation().getZ());
-        position.addProperty("world", player.getLocation().getWorld().getName());
+        position.addProperty("dimension", mapWorldToDimension(player.getLocation().getWorld().getName()));
         eventData.add("position", position);
         
         sendGameEvent("player-death", eventData);
@@ -156,5 +156,20 @@ public class TakaroEventListener implements Listener {
         }
         // Fallback if client is not available
         return createPlayerData(player);
+    }
+    
+    /**
+     * Maps Minecraft world names to Takaro dimension names
+     * @param worldName The Minecraft world name
+     * @return The corresponding Takaro dimension name
+     */
+    private String mapWorldToDimension(String worldName) {
+        if (worldName.endsWith("_the_end")) {
+            return "end";
+        } else if (worldName.endsWith("_nether")) {
+            return "nether";
+        } else {
+            return "overworld";
+        }
     }
 }
