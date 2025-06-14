@@ -9,6 +9,7 @@ services:
     volumes:
       - ./plugin:/build
       - maven-cache:/build/.m2/repository
+      - ./.git:/build/.git:ro
     environment:
       - MAVEN_OPTS=-Dmaven.repo.local=/build/.m2/repository
 
