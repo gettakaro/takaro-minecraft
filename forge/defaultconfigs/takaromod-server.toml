@@ -1,0 +1,40 @@
+#Takaro Minecraft Forge Configuration
+[takaro]
+	#WebSocket Configuration
+	[takaro.websocket]
+		#WebSocket URL for Takaro connection
+		url = "wss://connect.edge.takaro.dev"
+		#Reconnection settings
+		[takaro.websocket.reconnect]
+			#Enable automatic reconnection
+			enabled = true
+			#Initial reconnect delay in milliseconds
+			initial_delay = 5000
+			#Maximum reconnect delay in milliseconds
+			max_delay = 300000
+			#Backoff multiplier for reconnect delays
+			backoff_multiplier = 2.0
+			#Maximum reconnect attempts (-1 for unlimited)
+			max_attempts = -1
+
+	#Authentication Configuration
+	[takaro.authentication]
+		#Identity token - unique identifier for this server instance
+		#Default will be set to the server name from server.properties
+		identity_token = "my-forge-server"
+		#Registration token for authentication with Takaro
+		#This should be obtained from your Takaro dashboard
+		registration_token = "xxx"
+
+	#Logging Configuration
+	[takaro.logging]
+		#Enable debug logging for WebSocket connections
+		debug = false
+		#Log all incoming/outgoing messages (for debugging)
+		log_messages = false
+		#Forward server console logs to Takaro
+		forward_server_logs = true
+		#Minimum log level to forward (TRACE, DEBUG, INFO, WARN, ERROR, FATAL)
+		min_level = "INFO"
+		#List of logger names to filter out (avoid spam)
+		filtered_loggers = ["org.java_websocket", "io.netty"]

@@ -1,7 +1,10 @@
 package io.takaro.minecraft;
 
+import io.takaro.minecraft.commands.TakaroTestCommand;
+import io.takaro.minecraft.config.TakaroConfig;
 import net.minecraft.server.MinecraftServer;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -21,10 +24,13 @@ public class TakaroMod {
     private static TakaroMod instance;
     private MinecraftServer server;
     private TakaroWebSocketClient webSocketClient;
-    private TakaroConfig config;
+    private boolean shuttingDown = false;
     
     public TakaroMod() {
         instance = this;
+        
+        // Register configuration
+        TakaroConfig.register();
         
         // Register mod lifecycle events
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::commonSetup);
@@ -60,6 +66,7 @@ public class TakaroMod {
     @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
         LOGGER.info("Takaro Mod server stopping");
+        shuttingDown = true;
         
         if (webSocketClient != null) {
             LOGGER.info("Shutting down Takaro WebSocket connection...");
@@ -70,21 +77,67 @@ public class TakaroMod {
     }
     
     private void loadConfig() {
-        // TODO: Implement configuration loading
         LOGGER.info("Loading Takaro configuration...");
-        // For now, we'll use hardcoded values or environment variables
+        // Configuration is automatically loaded by Forge from the TOML file
+        // Values can be accessed through TakaroConfig static fields
+        LOGGER.info("Configuration loaded from takaromod-server.toml");
     }
     
     private void initializeWebSocket() {
-        // TODO: Implement WebSocket initialization
         LOGGER.info("Initializing Takaro WebSocket connection...");
-        // This will be implemented in Phase 2
+        
+        try {
+            // Get configuration values
+            String wsUrl = TakaroConfig.WEBSOCKET_URL.get();
+            String identityToken = TakaroConfig.IDENTITY_TOKEN.get();
+            String registrationToken = TakaroConfig.REGISTRATION_TOKEN.get();
+            
+            // Use server name as identity token if not specified
+            if (identityToken == null || identityToken.isEmpty()) {
+                identityToken = server.getServerMotd();
+                if (identityToken == null || identityToken.isEmpty()) {
+                    identityToken = "minecraft-forge-server";
+                }
+                LOGGER.info("Using server identity: " + identityToken);
+            }
+            
+            // Check if registration token is provided
+            if (registrationToken == null || registrationToken.isEmpty()) {
+                LOGGER.error("Registration token not configured! Please set it in takaromod-server.toml");
+                return;
+            }
+            
+            java.net.URI serverUri = java.net.URI.create(wsUrl);
+            webSocketClient = new TakaroWebSocketClient(this, serverUri, identityToken, registrationToken);
+            
+            LOGGER.info("Connecting to Takaro WebSocket server: " + wsUrl);
+            webSocketClient.connect()
+                .whenComplete((ws, throwable) -> {
+                    if (throwable != null) {
+                        LOGGER.error("Initial connection failed: " + throwable.getMessage());
+                    } else {
+                        LOGGER.info("WebSocket connection initiated successfully");
+                    }
+                });
+            
+        } catch (Exception e) {
+            LOGGER.error("Failed to initialize WebSocket connection: " + e.getMessage());
+            LOGGER.debug("Exception details: ", e);
+        }
+    }
+    
+    @SubscribeEvent
+    public void onRegisterCommands(RegisterCommandsEvent event) {
+        LOGGER.info("Registering Takaro commands...");
+        // TODO: Fix command registration - Commands.literal() method is obfuscated
+        // TakaroTestCommand.register(event.getDispatcher());
+        LOGGER.warn("Command registration temporarily disabled due to obfuscation issue");
     }
     
     private void registerEventHandlers() {
-        // TODO: Register Forge event handlers
         LOGGER.info("Registering Takaro event handlers...");
-        // This will be implemented in Phase 4
+        // Event handlers will be implemented in Phase 4
+        // Commands are registered via the @SubscribeEvent method above
     }
     
     public static TakaroMod getInstance() {
@@ -107,7 +160,8 @@ public class TakaroMod {
         return webSocketClient;
     }
     
-    public TakaroConfig getConfig() {
-        return config;
+    
+    public boolean isShuttingDown() {
+        return shuttingDown;
     }
 }
