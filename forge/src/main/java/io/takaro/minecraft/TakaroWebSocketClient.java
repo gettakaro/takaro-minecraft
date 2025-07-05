@@ -212,7 +212,37 @@ public class TakaroWebSocketClient implements WebSocket.Listener {
     }
     
     private void handleError(JsonObject message) {
-        String error = message.has("message") ? message.get("message").getAsString() : "Unknown error";
+        // Log the full error message for debugging
+        logger.error("Received error message from Takaro: " + message.toString());
+        
+        String error = "Unknown error";
+        
+        // Try different possible error fields
+        if (message.has("message")) {
+            error = message.get("message").getAsString();
+        } else if (message.has("error")) {
+            // Handle if error is a string
+            if (message.get("error").isJsonPrimitive()) {
+                error = message.get("error").getAsString();
+            }
+            // Handle if error is an object
+            else if (message.get("error").isJsonObject()) {
+                JsonObject errorObj = message.getAsJsonObject("error");
+                if (errorObj.has("message")) {
+                    error = errorObj.get("message").getAsString();
+                } else {
+                    error = errorObj.toString();
+                }
+            }
+        } else if (message.has("payload")) {
+            JsonObject payload = message.getAsJsonObject("payload");
+            if (payload.has("error")) {
+                error = payload.get("error").getAsString();
+            } else if (payload.has("message")) {
+                error = payload.get("message").getAsString();
+            }
+        }
+        
         logger.error("Takaro error: " + error);
         
         if (message.has("code")) {
