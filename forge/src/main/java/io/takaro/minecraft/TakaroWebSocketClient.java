@@ -2,6 +2,9 @@ package io.takaro.minecraft;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
 import io.takaro.minecraft.config.TakaroConfig;
 import org.apache.logging.log4j.Logger;
 
@@ -233,15 +236,63 @@ public class TakaroWebSocketClient implements WebSocket.Listener {
         
         logger.info("Received request: {} (ID: {})", action, requestId);
         
-        // For Phase 2, we'll just respond with "not implemented" for all requests
-        // Phase 3 will implement the actual handlers
-        JsonObject errorResponse = new JsonObject();
-        errorResponse.addProperty("type", "response");
-        if (requestId != null) {
-            errorResponse.addProperty("requestId", requestId);
+        // Route to specific handler based on action
+        switch (action) {
+            case "testReachability":
+                handleTestReachability(requestId);
+                break;
+            case "getPlayer":
+                handleGetPlayer(requestId, message);
+                break;
+            case "getPlayers":
+                handleGetPlayers(requestId);
+                break;
+            case "getPlayerInventory":
+                handleGetPlayerInventory(requestId, message);
+                break;
+            case "getPlayerLocation":
+                handleGetPlayerLocation(requestId, message);
+                break;
+            case "listItems":
+                handleListItems(requestId);
+                break;
+            case "listEntities":
+                handleListEntities(requestId);
+                break;
+            case "listLocations":
+                handleListLocations(requestId);
+                break;
+            case "listBans":
+                handleListBans(requestId);
+                break;
+            case "sendMessage":
+                handleSendMessage(requestId, message);
+                break;
+            case "giveItem":
+                handleGiveItem(requestId, message);
+                break;
+            case "executeConsoleCommand":
+                handleExecuteConsoleCommand(requestId, message);
+                break;
+            case "kickPlayer":
+                handleKickPlayer(requestId, message);
+                break;
+            case "banPlayer":
+                handleBanPlayer(requestId, message);
+                break;
+            case "unbanPlayer":
+                handleUnbanPlayer(requestId, message);
+                break;
+            case "shutdown":
+                handleShutdown(requestId, message);
+                break;
+            case "teleportPlayer":
+                handleTeleportPlayer(requestId, message);
+                break;
+            default:
+                // Send error for unimplemented actions
+                sendErrorResponse(requestId, "Action not implemented: " + action);
         }
-        errorResponse.addProperty("error", "Action not implemented yet: " + action);
-        sendMessage(errorResponse);
     }
     
     private void sendMessage(JsonObject message) {
@@ -345,5 +396,130 @@ public class TakaroWebSocketClient implements WebSocket.Listener {
                     logger.debug("WebSocket connection established successfully");
                 }
             });
+    }
+    
+    // Utility methods for request handling
+    private JsonObject parseArgsFromMessage(JsonObject message) {
+        try {
+            if (message.has("payload")) {
+                JsonObject payload = message.getAsJsonObject("payload");
+                if (payload.has("args")) {
+                    String argsString = payload.get("args").getAsString();
+                    return JsonParser.parseString(argsString).getAsJsonObject();
+                }
+            }
+        } catch (JsonSyntaxException e) {
+            logger.warn("Failed to parse args from message: " + e.getMessage());
+        }
+        return new JsonObject();
+    }
+    
+    private void sendErrorResponse(String requestId, String errorMessage) {
+        JsonObject errorResponse = new JsonObject();
+        errorResponse.addProperty("type", "response");
+        if (requestId != null) {
+            errorResponse.addProperty("requestId", requestId);
+        }
+        errorResponse.addProperty("error", errorMessage);
+        sendMessage(errorResponse);
+    }
+    
+    // Handler methods (to be implemented in phases)
+    private void handleTestReachability(String requestId) {
+        // Create the payload according to Takaro specification
+        JsonObject payload = new JsonObject();
+        payload.addProperty("connectable", true);
+        payload.add("reason", null);
+        
+        // Create the response message
+        JsonObject response = new JsonObject();
+        response.addProperty("type", "response");
+        if (requestId != null) {
+            response.addProperty("requestId", requestId);
+        }
+        response.add("payload", payload);
+        
+        logger.info("Responding to testReachability: connectable=true");
+        sendMessage(response);
+    }
+    
+    private void handleGetPlayer(String requestId, JsonObject message) {
+        // TODO: Implement in Phase 3.2
+        sendErrorResponse(requestId, "getPlayer not implemented yet");
+    }
+    
+    private void handleGetPlayers(String requestId) {
+        // TODO: Implement in Phase 3.3
+        sendErrorResponse(requestId, "getPlayers not implemented yet");
+    }
+    
+    private void handleGetPlayerInventory(String requestId, JsonObject message) {
+        // TODO: Implement in Phase 3.5
+        sendErrorResponse(requestId, "getPlayerInventory not implemented yet");
+    }
+    
+    private void handleGetPlayerLocation(String requestId, JsonObject message) {
+        // TODO: Implement in Phase 3.4
+        sendErrorResponse(requestId, "getPlayerLocation not implemented yet");
+    }
+    
+    private void handleListItems(String requestId) {
+        // TODO: Implement in Phase 5.1
+        sendErrorResponse(requestId, "listItems not implemented yet");
+    }
+    
+    private void handleListEntities(String requestId) {
+        // TODO: Implement in Phase 5.2
+        sendErrorResponse(requestId, "listEntities not implemented yet");
+    }
+    
+    private void handleListLocations(String requestId) {
+        // TODO: Implement in Phase 5.3
+        sendErrorResponse(requestId, "listLocations not implemented yet");
+    }
+    
+    private void handleListBans(String requestId) {
+        // TODO: Implement in Phase 4.5
+        sendErrorResponse(requestId, "listBans not implemented yet");
+    }
+    
+    private void handleSendMessage(String requestId, JsonObject message) {
+        // TODO: Implement in Phase 4.2
+        sendErrorResponse(requestId, "sendMessage not implemented yet");
+    }
+    
+    private void handleGiveItem(String requestId, JsonObject message) {
+        // TODO: Implement in Phase 4.3
+        sendErrorResponse(requestId, "giveItem not implemented yet");
+    }
+    
+    private void handleExecuteConsoleCommand(String requestId, JsonObject message) {
+        // TODO: Implement in Phase 4.1
+        sendErrorResponse(requestId, "executeConsoleCommand not implemented yet");
+    }
+    
+    private void handleKickPlayer(String requestId, JsonObject message) {
+        // TODO: Implement in Phase 4.4
+        sendErrorResponse(requestId, "kickPlayer not implemented yet");
+    }
+    
+    private void handleBanPlayer(String requestId, JsonObject message) {
+        // TODO: Implement in Phase 4.5
+        sendErrorResponse(requestId, "banPlayer not implemented yet");
+    }
+    
+    private void handleUnbanPlayer(String requestId, JsonObject message) {
+        // TODO: Implement in Phase 4.5
+        sendErrorResponse(requestId, "unbanPlayer not implemented yet");
+    }
+    
+    private void handleShutdown(String requestId, JsonObject message) {
+        // TODO: Implement in Phase 5.5
+        sendErrorResponse(requestId, "shutdown not implemented yet");
+    }
+    
+    private void handleTeleportPlayer(String requestId, JsonObject message) {
+        // TODO: Implement in Phase 5.4
+        sendErrorResponse(requestId, "teleportPlayer not implemented yet");
     }
 }

@@ -1,6 +1,5 @@
 package io.takaro.minecraft;
 
-import io.takaro.minecraft.commands.TakaroTestCommand;
 import io.takaro.minecraft.config.TakaroConfig;
 import net.minecraft.server.MinecraftServer;
 import net.minecraftforge.common.MinecraftForge;
@@ -94,11 +93,9 @@ public class TakaroMod {
             
             // Use server name as identity token if not specified
             if (identityToken == null || identityToken.isEmpty()) {
-                identityToken = server.getServerMotd();
-                if (identityToken == null || identityToken.isEmpty()) {
-                    identityToken = "minecraft-forge-server";
-                }
-                LOGGER.info("Using server identity: " + identityToken);
+                // In Forge, we'll use a default name since server properties aren't easily accessible
+                identityToken = "minecraft-forge-server";
+                LOGGER.info("Using default server identity: " + identityToken);
             }
             
             // Check if registration token is provided

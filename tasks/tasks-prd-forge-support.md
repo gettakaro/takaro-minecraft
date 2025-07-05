@@ -20,12 +20,12 @@
   - [ ] 2.6 [depends on: 2.5] Create simple test command to verify connection status
 
 - [ ] 3.0 Basic Player Methods - Implement essential player data retrieval methods
-  - [ ] 3.1 [depends on: 2.0] Implement request/response message handling framework
+  - [x] 3.1 [depends on: 2.0] Implement request/response message handling framework
   - [ ] 3.2 [depends on: 3.1] Implement getPlayer(gameId) method
   - [ ] 3.3 [depends on: 3.1] Implement getPlayers() method
   - [ ] 3.4 [depends on: 3.1] Implement getPlayerLocation(gameId) with dimension support
   - [ ] 3.5 [depends on: 3.1] Implement getPlayerInventory(gameId) method
-  - [ ] 3.6 [depends on: 3.1] Implement testReachability() method
+  - [x] 3.6 [depends on: 3.1] Implement testReachability() method
   - [ ] 3.7 [depends on: 3.2, 3.3] Add basic in-game testing for player methods
 
 - [ ] 4.0 Game Commands and Events - Implement server commands and event streaming
@@ -78,8 +78,8 @@
 - `Dockerfile.build-forge` - Docker image for Gradle builds
 - `docs/forge-spigot-differences.md` - API mapping documentation
 
-### Forge Mod Core Files (To be implemented)
-- `forge/src/main/java/io/takaro/minecraft/TakaroMessageHandler.java` - Request/response message processing
+### Phase 3 - Request/Response Framework
+- `forge/src/main/java/io/takaro/minecraft/TakaroWebSocketClient.java` - Updated with request routing framework and testReachability handler
 
 ### Method Implementation Files
 - `forge/src/main/java/io/takaro/forge/methods/PlayerMethods.java` - Player-related method implementations
