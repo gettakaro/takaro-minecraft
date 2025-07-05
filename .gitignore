@@ -1,5 +1,6 @@
 # Minecraft server data
 _data/
+_data-forge
 
 # Build artifacts
 plugin/target/

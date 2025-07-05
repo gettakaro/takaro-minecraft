@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  gradle-build:
+    build:
+      context: .
+      dockerfile: Dockerfile.build-forge
+    container_name: takaro-gradle-build
+    volumes:
+      - ./forge:/build
+      - gradle-cache:/build/.gradle
+      - gradle-home:/root/.gradle
+      - ./.git:/build/.git:ro
+    environment:
+      - GRADLE_USER_HOME=/root/.gradle
+
+volumes:
+  gradle-cache:
+    name: takaro-gradle-cache
+  gradle-home:
+    name: takaro-gradle-home
