@@ -14,9 +14,9 @@
 ```
 
 Output JARs:
-- `paper/build/libs/paper.jar`
-- `neoforge/build/libs/neoforge.jar`
-- `fabric/build/libs/fabric.jar`
+- `paper/build/libs/takaro-paper-<version>.jar`
+- `neoforge/build/libs/takaro-neoforge-<version>.jar`
+- `fabric/build/libs/takaro-fabric-<version>.jar`
 
 ## Deploy to Dev Servers
 

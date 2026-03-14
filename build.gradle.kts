@@ -3,11 +3,15 @@ plugins {
 }
 
 allprojects {
-    version = "1.0.0-SNAPSHOT"
+    version = findProperty("version")?.toString()?.takeIf { it != "unspecified" } ?: "1.0.0-SNAPSHOT"
 }
 
 subprojects {
     apply(plugin = "java")
+
+    base {
+        archivesName = "takaro-${project.name}"
+    }
 
     java {
         sourceCompatibility = JavaVersion.VERSION_21

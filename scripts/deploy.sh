@@ -8,10 +8,10 @@ find_jar() {
     local module="$1"
     local jar
     # Find the main JAR (not dev-shadow, not sources)
-    jar=$(find "$module/build/libs" -name "${module}-*.jar" \
+    jar=$(find "$module/build/libs" -name "takaro-${module}-*.jar" \
         -not -name "*-dev-shadow*" -not -name "*-sources*" 2>/dev/null | head -1)
     if [ -z "$jar" ]; then
-        echo "Error: No JAR found for $module. Run ./scripts/build.sh first." >&2
+        echo "Error: No JAR found for $module. Run ./gradlew build first." >&2
         exit 1
     fi
     echo "$jar"

@@ -16,9 +16,9 @@ Multi-platform Minecraft connector for the [Takaro](https://takaro.io) game mana
 ```
 
 This produces 3 JARs:
-- `paper/build/libs/paper.jar` — Paper/Spigot plugin
-- `neoforge/build/libs/neoforge.jar` — NeoForge mod
-- `fabric/build/libs/fabric.jar` — Fabric mod
+- `paper/build/libs/takaro-paper-<version>.jar` — Paper/Spigot plugin
+- `neoforge/build/libs/takaro-neoforge-<version>.jar` — NeoForge mod
+- `fabric/build/libs/takaro-fabric-<version>.jar` — Fabric mod
 
 ### Run servers with Docker Compose
 
