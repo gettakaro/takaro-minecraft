@@ -15,12 +15,14 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class TakaroPaperPlugin extends JavaPlugin implements GameAdapter {
 
     private TakaroConnector connector;
     private EventEmitter eventEmitter;
+    private final ConcurrentHashMap<String, PlayerLocation> lastKnownLocations = new ConcurrentHashMap<>();
 
     @Override
     public void onEnable() {
@@ -100,9 +102,11 @@ public class TakaroPaperPlugin extends JavaPlugin implements GameAdapter {
     @Override
     public PlayerLocation getPlayerLocation(String gameId) {
         Player player = Bukkit.getPlayer(UUID.fromString(gameId));
-        if (player == null) return null;
-        var loc = player.getLocation();
-        return new PlayerLocation(loc.getX(), loc.getY(), loc.getZ(), mapDimension(loc.getWorld()));
+        if (player == null) return lastKnownLocations.get(gameId);
+        var playerLoc = player.getLocation();
+        PlayerLocation loc = new PlayerLocation(playerLoc.getX(), playerLoc.getY(), playerLoc.getZ(), mapDimension(playerLoc.getWorld()));
+        lastKnownLocations.put(gameId, loc);
+        return loc;
     }
 
     @Override

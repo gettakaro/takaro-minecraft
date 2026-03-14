@@ -15,6 +15,7 @@ import net.minecraft.world.item.Items;
 import org.apache.logging.log4j.Logger;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class NeoForgeGameAdapter implements GameAdapter {
@@ -22,6 +23,7 @@ public class NeoForgeGameAdapter implements GameAdapter {
     private final Logger logger;
     private final MinecraftServer server;
     private EventEmitter eventEmitter;
+    private final ConcurrentHashMap<String, PlayerLocation> lastKnownLocations = new ConcurrentHashMap<>();
 
     public NeoForgeGameAdapter(Logger logger, MinecraftServer server) {
         this.logger = logger;
@@ -60,11 +62,13 @@ public class NeoForgeGameAdapter implements GameAdapter {
     @Override
     public PlayerLocation getPlayerLocation(String gameId) {
         ServerPlayer player = server.getPlayerList().getPlayer(UUID.fromString(gameId));
-        if (player == null) return null;
-        return new PlayerLocation(
+        if (player == null) return lastKnownLocations.get(gameId);
+        PlayerLocation loc = new PlayerLocation(
                 player.getX(), player.getY(), player.getZ(),
                 mapDimension(player.level().dimension().identifier())
         );
+        lastKnownLocations.put(gameId, loc);
+        return loc;
     }
 
     @Override

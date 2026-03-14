@@ -81,7 +81,10 @@ public class TakaroNeoForgeMod {
         if (adapter == null) return;
         EventEmitter emitter = adapter.getEventEmitter();
         if (emitter == null) return;
-        emitter.emitPlayerDisconnected(event.getEntity().getUUID().toString(), event.getEntity().getName().getString());
+        ServerPlayer player = (ServerPlayer) event.getEntity();
+        String gameId = player.getUUID().toString();
+        adapter.getPlayerLocation(gameId); // warm cache before player is removed from list
+        emitter.emitPlayerDisconnected(gameId, player.getName().getString());
     }
 
     @SubscribeEvent
