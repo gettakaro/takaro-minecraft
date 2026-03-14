@@ -55,12 +55,34 @@ Once the server is ready, grab recent logs and look for Takaro-relevant output:
 docker compose logs --tail=100 <service> 2>&1 | grep -iE "(Takaro|WebSocket|\[DEBUG\]|Identified|Authentication|identify)"
 ```
 
-### 6. Report
+### 6. Verify bot connectivity
+
+Poll `http://localhost:3001/status` for up to 60 seconds (5s intervals) until the target platform shows `connected: true`. If the bot service isn't running, start it with `docker compose up -d bot`.
+
+### 7. Verify Takaro reachability via MCP
+
+Use Takaro MCP tools for end-to-end verification:
+
+1. `mcp__takaro__gameserverSearch({})` — find the gameserver ID for the target platform
+2. `mcp__takaro__gameserverTestReachabilityForId({ gameserverId: "<id>" })` — verify Takaro can reach the connector
+
+### 8. Smoke test
+
+1. `mcp__takaro__gameserverGetPlayers({ gameserverId: "<id>" })` — verify the bot appears in the player list
+2. Record timestamp: `date -u +%Y-%m-%dT%H:%M:%SZ`
+3. Bot sends chat: `curl -X POST http://localhost:3001/bot/<platform>/chat -H 'Content-Type: application/json' -d '{"message": "test-deploy smoke test"}'`
+4. Wait 5 seconds
+5. `mcp__takaro__eventSearch({ filters: { eventName: ["chat-message"], gameserverId: ["<id>"] }, greaterThan: { createdAt: "<timestamp>" } })` — verify the chat event reached Takaro
+
+### 9. Report
 
 For each platform, report:
 - **Build**: pass/fail
 - **Deploy**: pass/fail
 - **Server ready**: pass/fail (with timeout note if applicable)
+- **Bot connected**: pass/fail (with timeout note if applicable)
+- **Takaro reachability (MCP)**: pass/fail (connectable status)
+- **Smoke test**: pass/fail (bot in player list, chat event received)
 - **Takaro status**: Show the relevant log lines. Classify as:
   - **Connected**: if logs show "Identified successfully" or "Authentication confirmed"
   - **Error**: if logs show warnings/errors from Takaro

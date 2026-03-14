@@ -16,6 +16,7 @@ Multi-platform Minecraft connector for the Takaro game management platform. Impl
 | Testing | [TESTING.md](TESTING.md) | `./gradlew :core:test` |
 | Docker Dev Servers | [DOCKER.md](DOCKER.md) | `docker compose up -d paper` |
 | Test Bot | [BOT.md](BOT.md) | `curl http://localhost:3001/status` |
+| Integration Testing | [INTEGRATION-TESTING.md](INTEGRATION-TESTING.md) | Takaro MCP tools + bot API |
 
 ## Architecture Overview
 

@@ -9,7 +9,7 @@ An HTTP-controlled Mineflayer bot running as a Docker service (`bot`). The bot a
 
 ## Arguments
 
-`$ARGUMENTS` specifies what to do. Examples: `status`, `chat paper !ping`, `attack neoforge`.
+`$ARGUMENTS` specifies what to do. Examples: `status`, `chat paper +ping`, `attack neoforge`.
 
 ## API Reference
 
@@ -28,7 +28,7 @@ Returns connection status for all servers (paper, neoforge, fabric).
 ```bash
 curl -X POST http://localhost:3001/bot/<server>/chat \
   -H 'Content-Type: application/json' \
-  -d '{"message": "!ping"}'
+  -d '{"message": "+ping"}'
 ```
 
 ### Movement
@@ -88,8 +88,10 @@ Where `<server>` is `paper`, `neoforge`, or `fabric`.
 
 1. Deploy the mod: `/test-deploy paper`
 2. Wait for bot to reconnect: `curl http://localhost:3001/status` (check `paper.connected`)
-3. Send command: `curl -X POST http://localhost:3001/bot/paper/chat -d '{"message": "!ping"}' -H 'Content-Type: application/json'`
+3. Send command: `curl -X POST http://localhost:3001/bot/paper/chat -d '{"message": "+ping"}' -H 'Content-Type: application/json'`
 4. Check server logs for command execution
+
+**Note**: The command prefix is `+` (not `!`). Confirm via `mcp__takaro__settingsGet`.
 
 ### Trigger a player death event
 

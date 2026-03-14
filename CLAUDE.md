@@ -9,6 +9,7 @@ Claude will automatically discover and use this skill. The skill contains:
 - `TESTING.md` — JUnit test commands and patterns
 - `DOCKER.md` — Dev server setup, RCON, configuration
 - `BOT.md` — Mineflayer test bot HTTP API and workflows
+- `INTEGRATION-TESTING.md` — End-to-end testing with MCP tools, event verification, known limitations
 
 IMPORTANT DOCUMENTATION:
 
@@ -49,6 +50,17 @@ docker compose up -d bot        # Test bot API on :3001
 Deploy: `./scripts/deploy.sh paper|neoforge|fabric|all`
 
 Debug logging: `TAKARO_DEBUG=true docker compose up -d paper` — shows raw WebSocket messages in logs.
+
+## After Code Changes
+
+When you modify connector code (core/, paper/, neoforge/, fabric/), you MUST:
+1. Build and deploy: `/test-deploy <platform>`
+2. Run relevant integration tests from INTEGRATION-TESTING.md
+   - Use the Code Change → Test Mapping table
+3. Use Takaro MCP tools for verification (not just logs)
+4. Report results before considering the change complete
+
+The Takaro command prefix is `+`. Confirm via `mcp__takaro__settingsGet`.
 
 ## Current Status
 

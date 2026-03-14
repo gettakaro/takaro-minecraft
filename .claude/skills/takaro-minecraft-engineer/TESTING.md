@@ -44,3 +44,13 @@ HTML report: `core/build/reports/tests/test/index.html`
 
 - No setup required (no Docker services, no env vars needed)
 - Platform modules (paper, neoforge, fabric) have no tests — testing happens via Docker dev servers and the test bot
+
+## Integration Tests
+
+Unit tests verify internal logic. Integration tests verify the full protocol flow from game server through WebSocket to the Takaro backend. They use:
+
+- **Mineflayer test bot** — triggers in-game events (chat, death, kills)
+- **Takaro MCP tools** — verifies events arrive in Takaro and actions execute correctly
+- **RCON** — triggers server-side events (kill player, summon mobs)
+
+See [INTEGRATION-TESTING.md](INTEGRATION-TESTING.md) for the full workflow, event verification patterns, and the code-change-to-test mapping table.

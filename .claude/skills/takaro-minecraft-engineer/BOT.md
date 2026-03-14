@@ -48,15 +48,23 @@ Where `:server` is `paper`, `neoforge`, or `fabric`.
 curl http://localhost:3001/status                    # Verify bot connected
 curl -X POST http://localhost:3001/bot/paper/chat \
   -H 'Content-Type: application/json' \
-  -d '{"message": "!ping"}'                          # Send command
+  -d '{"message": "+ping"}'                           # Send command
 ```
 
 ### Trigger game events for Takaro
 
 - **Player connect/disconnect**: Bot auto-generates these on connect
 - **Chat message**: Use `/bot/:server/chat`
-- **Entity killed**: Use `/bot/:server/attack`
-- **Player death**: Kill bot via RCON: `docker compose exec paper rcon-cli kill TakaroBot_paper`
+- **Entity killed**: Use `/bot/:server/attack` (targets hostile mobs and players — `e.type === 'mob' || e.type === 'player'`, not `animal`)
+- **Player death**: Kill bot via RCON: `docker compose exec paper rcon-cli kill TakaroBot_paper` (must call `/bot/:server/respawn` after)
+
+## Important
+
+- The Takaro command prefix is `+` (not `!`). Confirm via `mcp__takaro__settingsGet`.
+- All POST endpoints need `Content-Type: application/json` header.
+- Bot does NOT auto-respawn after death — call `POST /bot/:server/respawn` to respawn.
+- `attack()` targets hostile mobs and players (`e.type === 'mob' || e.type === 'player'`), not passive animals.
+- To verify events actually reached Takaro (not just that the bot sent them), use Takaro MCP tools. See [INTEGRATION-TESTING.md](INTEGRATION-TESTING.md).
 
 ## Source Code
 
