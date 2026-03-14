@@ -57,8 +57,14 @@ public class TakaroWebSocketClient extends WebSocketClient {
                     handleRequest(json);
                     break;
                 case "error":
-                    String errorMsg = json.has("message") ? json.get("message").getAsString() : "unknown";
-                    adapter.logWarning("Server error: " + errorMsg);
+                    String errorMsg = "unknown";
+                    if (json.has("payload") && json.getAsJsonObject("payload").has("message")) {
+                        errorMsg = json.getAsJsonObject("payload").get("message").getAsString();
+                    } else if (json.has("message")) {
+                        errorMsg = json.get("message").getAsString();
+                    }
+                    String requestId = json.has("requestId") ? json.get("requestId").getAsString() : null;
+                    adapter.logWarning("Server error: " + errorMsg + (requestId != null ? " (requestId=" + requestId + ")" : ""));
                     break;
                 default:
                     adapter.logWarning("Unknown message type: " + type);

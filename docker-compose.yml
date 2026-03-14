@@ -14,6 +14,9 @@ services:
       RCON_PASSWORD: "${RCON_PASSWORD:-takaro123}"
       RCON_PORT: 25575
       ONLINE_MODE: "false"
+      TAKARO_WS_URL: "${TAKARO_WS_URL}"
+      TAKARO_REGISTRATION_TOKEN: "${TAKARO_REGISTRATION_TOKEN}"
+      TAKARO_IDENTITY_TOKEN: "takaro-paper-dev"
     volumes:
       - ./_data/paper:/data
     restart: unless-stopped
@@ -35,6 +38,9 @@ services:
       RCON_PASSWORD: "${RCON_PASSWORD:-takaro123}"
       RCON_PORT: 25575
       ONLINE_MODE: "false"
+      TAKARO_WS_URL: "${TAKARO_WS_URL}"
+      TAKARO_REGISTRATION_TOKEN: "${TAKARO_REGISTRATION_TOKEN}"
+      TAKARO_IDENTITY_TOKEN: "takaro-neoforge-dev"
     volumes:
       - ./_data/neoforge:/data
     restart: unless-stopped
@@ -51,11 +57,15 @@ services:
       EULA: "TRUE"
       TYPE: FABRIC
       VERSION: "1.21.1"
+      MODRINTH_PROJECTS: "fabric-api"
       MEMORY: 2G
       ENABLE_RCON: "true"
       RCON_PASSWORD: "${RCON_PASSWORD:-takaro123}"
       RCON_PORT: 25575
       ONLINE_MODE: "false"
+      TAKARO_WS_URL: "${TAKARO_WS_URL}"
+      TAKARO_REGISTRATION_TOKEN: "${TAKARO_REGISTRATION_TOKEN}"
+      TAKARO_IDENTITY_TOKEN: "takaro-fabric-dev"
     volumes:
       - ./_data/fabric:/data
     restart: unless-stopped

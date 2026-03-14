@@ -33,6 +33,15 @@ tasks.shadowJar {
     archiveClassifier.set("")
     relocate("org.java_websocket", "io.takaro.libs.websocket")
     relocate("com.google.gson", "io.takaro.libs.gson")
+    exclude("com/google/errorprone/**")
+    exclude("com/google/j2objc/**")
+    exclude("javax/annotation/**")
+    exclude("org/checkerframework/**")
+    exclude("META-INF/maven/com.google.errorprone/**")
+    exclude("META-INF/maven/com.google.j2objc/**")
+    exclude("META-INF/maven/org.checkerframework/**")
+    exclude("org/slf4j/**")
+    exclude("META-INF/maven/org.slf4j/**")
 }
 
 tasks.build {

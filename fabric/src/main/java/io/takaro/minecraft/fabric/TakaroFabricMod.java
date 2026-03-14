@@ -27,7 +27,15 @@ public class TakaroFabricMod implements DedicatedServerModInitializer {
             Path configPath = FabricLoader.getInstance().getConfigDir().resolve("takaro.json");
 
             TakaroConfig config = loadConfig(configPath);
-            if (config == null) return;
+            if (config == null) {
+                config = new TakaroConfig();
+            }
+            config.applyEnvOverrides();
+
+            if (config.getWsUrl() == null || config.getWsUrl().isEmpty()) {
+                LOGGER.warn("No WebSocket URL configured, skipping Takaro connection");
+                return;
+            }
 
             GameAdapter adapter = new GameAdapter() {
                 @Override

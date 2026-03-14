@@ -4,6 +4,8 @@ https://docs.takaro.io/advanced/adding-support-for-a-new-game
 https://docs.takaro.io/advanced/connection-architecture
 https://docs.takaro.io/advanced/generic-connector-protocol
 
+You must run the non-interactive version of verify instead of the normal command 
+
 ## Project Structure
 
 Multi-platform Minecraft connector using Gradle multi-module build:

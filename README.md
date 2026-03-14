@@ -23,6 +23,9 @@ This produces 3 JARs:
 ### Run servers with Docker Compose
 
 ```bash
+# Copy and fill in your Takaro credentials
+cp .env.example .env
+
 # Start all 3 servers
 docker compose up -d
 
@@ -50,6 +53,20 @@ RCON password: `takaro123`
 ```
 
 ### Configure
+
+#### Environment variables (recommended for Docker)
+
+Environment variables override file-based config when set:
+
+| Variable | Description |
+|----------|-------------|
+| `TAKARO_WS_URL` | WebSocket URL for your Takaro instance |
+| `TAKARO_IDENTITY_TOKEN` | Unique identity token for this server |
+| `TAKARO_REGISTRATION_TOKEN` | Registration token from the Takaro dashboard |
+
+In Docker Compose, these are passed to containers automatically from your `.env` file. Each container gets a hardcoded `TAKARO_IDENTITY_TOKEN` (e.g. `takaro-paper-dev`).
+
+#### Config files
 
 Each platform has its own config format:
 

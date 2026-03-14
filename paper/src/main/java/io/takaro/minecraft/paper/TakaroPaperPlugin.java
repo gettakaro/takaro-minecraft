@@ -22,6 +22,12 @@ public class TakaroPaperPlugin extends JavaPlugin implements GameAdapter {
         config.setReconnectDelay(getConfig().getLong("takaro.reconnect.delay", 5000));
         config.setMaxReconnectDelay(getConfig().getLong("takaro.reconnect.max_delay", 300000));
         config.setBackoffMultiplier(getConfig().getDouble("takaro.reconnect.backoff_multiplier", 1.5));
+        config.applyEnvOverrides();
+
+        if (config.getWsUrl() == null || config.getWsUrl().isEmpty()) {
+            getLogger().warning("No WebSocket URL configured, skipping Takaro connection");
+            return;
+        }
 
         connector = new TakaroConnector(this, config);
         connector.connect();

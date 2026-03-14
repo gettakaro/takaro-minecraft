@@ -29,4 +29,19 @@ public class TakaroConfig {
 
     public double getBackoffMultiplier() { return backoffMultiplier; }
     public void setBackoffMultiplier(double backoffMultiplier) { this.backoffMultiplier = backoffMultiplier; }
+
+    public void applyEnvOverrides() {
+        String wsUrlEnv = System.getenv("TAKARO_WS_URL");
+        if (wsUrlEnv != null && !wsUrlEnv.isEmpty()) {
+            this.wsUrl = wsUrlEnv;
+        }
+        String identityEnv = System.getenv("TAKARO_IDENTITY_TOKEN");
+        if (identityEnv != null && !identityEnv.isEmpty()) {
+            this.identityToken = identityEnv;
+        }
+        String registrationEnv = System.getenv("TAKARO_REGISTRATION_TOKEN");
+        if (registrationEnv != null && !registrationEnv.isEmpty()) {
+            this.registrationToken = registrationEnv;
+        }
+    }
 }
