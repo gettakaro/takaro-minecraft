@@ -1,11 +1,19 @@
 package io.takaro.minecraft.fabric;
 
-import io.takaro.minecraft.core.GameAdapter;
+import io.takaro.minecraft.core.EventEmitter;
 import io.takaro.minecraft.core.TakaroConfig;
 import io.takaro.minecraft.core.TakaroConnector;
+import io.takaro.minecraft.core.model.PlayerInfo;
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,46 +28,101 @@ public class TakaroFabricMod implements DedicatedServerModInitializer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("Takaro");
     private TakaroConnector connector;
+    private FabricGameAdapter adapter;
 
     @Override
     public void onInitializeServer() {
-        ServerLifecycleEvents.SERVER_STARTED.register(server -> {
-            Path configPath = FabricLoader.getInstance().getConfigDir().resolve("takaro.json");
-
-            TakaroConfig config = loadConfig(configPath);
-            if (config == null) {
-                config = new TakaroConfig();
-            }
-            config.applyEnvOverrides();
-
-            if (config.getWsUrl() == null || config.getWsUrl().isEmpty()) {
-                LOGGER.warn("No WebSocket URL configured, skipping Takaro connection");
-                return;
-            }
-
-            GameAdapter adapter = new GameAdapter() {
-                @Override
-                public void logInfo(String msg) { LOGGER.info(msg); }
-
-                @Override
-                public void logWarning(String msg) { LOGGER.warn(msg); }
-
-                @Override
-                public void logDebug(String msg) { LOGGER.info("[DEBUG] " + msg); }
-
-                @Override
-                public void runOnMainThread(Runnable task) { server.execute(task); }
-            };
-
-            connector = new TakaroConnector(adapter, config);
-            connector.connect();
-        });
-
+        ServerLifecycleEvents.SERVER_STARTED.register(this::onServerStarted);
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
             if (connector != null) {
                 connector.shutdown();
             }
         });
+
+        // Register game event callbacks
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            if (adapter == null) return;
+            EventEmitter emitter = adapter.getEventEmitter();
+            if (emitter == null) return;
+            ServerPlayer player = handler.getPlayer();
+            emitter.emitPlayerConnected(adapter.toPlayerInfo(player));
+        });
+
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+            if (adapter == null) return;
+            EventEmitter emitter = adapter.getEventEmitter();
+            if (emitter == null) return;
+            emitter.emitPlayerDisconnected(handler.getPlayer().getUUID().toString());
+        });
+
+        ServerMessageEvents.CHAT_MESSAGE.register((message, sender, params) -> {
+            if (adapter == null) return;
+            EventEmitter emitter = adapter.getEventEmitter();
+            if (emitter == null) return;
+            emitter.emitChatMessage(
+                    sender.getUUID().toString(),
+                    sender.getGameProfile().getName(),
+                    "global",
+                    message.signedContent()
+            );
+        });
+
+        ServerLivingEntityEvents.AFTER_DEATH.register((entity, damageSource) -> {
+            if (adapter == null) return;
+            EventEmitter emitter = adapter.getEventEmitter();
+            if (emitter == null) return;
+
+            if (entity instanceof ServerPlayer victim) {
+                // Player death
+                String attackerGameId = null;
+                String attackerName = null;
+                if (damageSource.getEntity() instanceof Player attacker) {
+                    attackerGameId = attacker.getUUID().toString();
+                    attackerName = attacker.getGameProfile().getName();
+                }
+                emitter.emitPlayerDeath(
+                        victim.getUUID().toString(),
+                        victim.getGameProfile().getName(),
+                        attackerGameId, attackerName,
+                        victim.getX(), victim.getY(), victim.getZ(),
+                        adapter.mapDimension(victim.level().dimension().location())
+                );
+            } else if (damageSource.getEntity() instanceof ServerPlayer killer) {
+                // Entity killed by player
+                var entityKey = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
+                String weaponCode = "";
+                var mainHand = killer.getMainHandItem();
+                if (!mainHand.isEmpty()) {
+                    var itemKey = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(mainHand.getItem());
+                    weaponCode = itemKey != null ? itemKey.toString() : "";
+                }
+                emitter.emitEntityKilled(
+                        killer.getUUID().toString(),
+                        killer.getGameProfile().getName(),
+                        entityKey != null ? entityKey.toString() : "unknown",
+                        weaponCode
+                );
+            }
+        });
+    }
+
+    private void onServerStarted(MinecraftServer server) {
+        Path configPath = FabricLoader.getInstance().getConfigDir().resolve("takaro.json");
+
+        TakaroConfig config = loadConfig(configPath);
+        if (config == null) {
+            config = new TakaroConfig();
+        }
+        config.applyEnvOverrides();
+
+        if (config.getWsUrl() == null || config.getWsUrl().isEmpty()) {
+            LOGGER.warn("No WebSocket URL configured, skipping Takaro connection");
+            return;
+        }
+
+        adapter = new FabricGameAdapter(LOGGER, server);
+        connector = new TakaroConnector(adapter, config);
+        connector.connect();
     }
 
     private TakaroConfig loadConfig(Path path) {

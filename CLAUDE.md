@@ -38,4 +38,4 @@ Debug logging: `TAKARO_DEBUG=true docker compose up -d paper` — shows raw WebS
 
 ## Current Status
 
-Phase 1 scaffold — only `testReachability` is implemented. Full protocol implementation comes in Phase 2.
+Full Takaro Generic Connector Protocol implemented: all 16 actions (player queries, world queries, player actions, bans, commands, teleport, kick, shutdown) and 6 game events (player connect/disconnect, chat, player death, entity killed, log).

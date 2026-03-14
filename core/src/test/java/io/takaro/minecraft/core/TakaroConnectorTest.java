@@ -1,8 +1,10 @@
 package io.takaro.minecraft.core;
 
+import io.takaro.minecraft.core.model.*;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -25,6 +27,59 @@ class TakaroConnectorTest {
 
         @Override
         public void runOnMainThread(Runnable task) { task.run(); }
+
+        @Override
+        public PlayerInfo getPlayer(String gameId) { return null; }
+
+        @Override
+        public List<PlayerInfo> getPlayers() { return Collections.emptyList(); }
+
+        @Override
+        public PlayerLocation getPlayerLocation(String gameId) { return null; }
+
+        @Override
+        public List<InventoryItem> getPlayerInventory(String gameId) { return Collections.emptyList(); }
+
+        @Override
+        public List<GameItem> listItems() { return Collections.emptyList(); }
+
+        @Override
+        public List<GameEntity> listEntities() { return Collections.emptyList(); }
+
+        @Override
+        public List<GameLocation> listLocations() { return Collections.emptyList(); }
+
+        @Override
+        public void giveItem(String gameId, String itemCode, int amount, String quality) {}
+
+        @Override
+        public void sendMessage(String message, String recipientGameId) {}
+
+        @Override
+        public CommandResult executeConsoleCommand(String command) {
+            return new CommandResult(true, "", null);
+        }
+
+        @Override
+        public void teleportPlayer(String gameId, double x, double y, double z, String dimension) {}
+
+        @Override
+        public void kickPlayer(String gameId, String reason) {}
+
+        @Override
+        public void banPlayer(String gameId, String reason, String expiresAt) {}
+
+        @Override
+        public void unbanPlayer(String gameId) {}
+
+        @Override
+        public List<BanEntry> listBans() { return Collections.emptyList(); }
+
+        @Override
+        public void shutdownServer() {}
+
+        @Override
+        public void setEventEmitter(EventEmitter emitter) {}
     }
 
     @Test

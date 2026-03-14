@@ -1,12 +1,19 @@
 package io.takaro.minecraft.neoforge;
 
-import io.takaro.minecraft.core.GameAdapter;
+import io.takaro.minecraft.core.EventEmitter;
 import io.takaro.minecraft.core.TakaroConfig;
 import io.takaro.minecraft.core.TakaroConnector;
+import io.takaro.minecraft.core.model.PlayerInfo;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.ServerChatEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import org.apache.logging.log4j.LogManager;
@@ -23,6 +30,7 @@ public class TakaroNeoForgeMod {
 
     private static final Logger LOGGER = LogManager.getLogger("Takaro");
     private TakaroConnector connector;
+    private NeoForgeGameAdapter adapter;
 
     public TakaroNeoForgeMod() {
         NeoForge.EVENT_BUS.register(this);
@@ -44,20 +52,7 @@ public class TakaroNeoForgeMod {
             return;
         }
 
-        GameAdapter adapter = new GameAdapter() {
-            @Override
-            public void logInfo(String msg) { LOGGER.info(msg); }
-
-            @Override
-            public void logWarning(String msg) { LOGGER.warn(msg); }
-
-            @Override
-            public void logDebug(String msg) { LOGGER.info("[DEBUG] " + msg); }
-
-            @Override
-            public void runOnMainThread(Runnable task) { server.execute(task); }
-        };
-
+        adapter = new NeoForgeGameAdapter(LOGGER, server);
         connector = new TakaroConnector(adapter, config);
         connector.connect();
     }
@@ -68,6 +63,82 @@ public class TakaroNeoForgeMod {
             connector.shutdown();
         }
     }
+
+    // --- Game Events ---
+
+    @SubscribeEvent
+    public void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        if (adapter == null) return;
+        EventEmitter emitter = adapter.getEventEmitter();
+        if (emitter == null) return;
+        if (event.getEntity() instanceof ServerPlayer player) {
+            emitter.emitPlayerConnected(adapter.toPlayerInfo(player));
+        }
+    }
+
+    @SubscribeEvent
+    public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (adapter == null) return;
+        EventEmitter emitter = adapter.getEventEmitter();
+        if (emitter == null) return;
+        emitter.emitPlayerDisconnected(event.getEntity().getUUID().toString());
+    }
+
+    @SubscribeEvent
+    public void onServerChat(ServerChatEvent event) {
+        if (adapter == null) return;
+        EventEmitter emitter = adapter.getEventEmitter();
+        if (emitter == null) return;
+        ServerPlayer player = event.getPlayer();
+        emitter.emitChatMessage(
+                player.getUUID().toString(),
+                player.getGameProfile().getName(),
+                "global",
+                event.getRawText()
+        );
+    }
+
+    @SubscribeEvent
+    public void onLivingDeath(LivingDeathEvent event) {
+        if (adapter == null) return;
+        EventEmitter emitter = adapter.getEventEmitter();
+        if (emitter == null) return;
+        LivingEntity entity = event.getEntity();
+
+        if (entity instanceof ServerPlayer victim) {
+            // Player death
+            String attackerGameId = null;
+            String attackerName = null;
+            if (event.getSource().getEntity() instanceof Player attacker) {
+                attackerGameId = attacker.getUUID().toString();
+                attackerName = attacker.getGameProfile().getName();
+            }
+            emitter.emitPlayerDeath(
+                    victim.getUUID().toString(),
+                    victim.getGameProfile().getName(),
+                    attackerGameId, attackerName,
+                    victim.getX(), victim.getY(), victim.getZ(),
+                    adapter.mapDimension(victim.level().dimension().location())
+            );
+        } else if (event.getSource().getEntity() instanceof ServerPlayer killer) {
+            // Entity killed by player
+            var entityKey = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
+            String weaponCode = "";
+            var mainHand = killer.getMainHandItem();
+            if (!mainHand.isEmpty()) {
+                var itemKey = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(mainHand.getItem());
+                weaponCode = itemKey != null ? itemKey.toString() : "";
+            }
+            emitter.emitEntityKilled(
+                    killer.getUUID().toString(),
+                    killer.getGameProfile().getName(),
+                    entityKey != null ? entityKey.toString() : "unknown",
+                    weaponCode
+            );
+        }
+    }
+
+    // --- Config ---
 
     private TakaroConfig loadConfig(Path path) {
         if (!Files.exists(path)) {

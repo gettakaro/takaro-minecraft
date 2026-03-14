@@ -31,6 +31,7 @@ public class TakaroConnector {
         }
         try {
             wsClient = new TakaroWebSocketClient(new URI(url), adapter, config);
+            adapter.setEventEmitter(wsClient);
             wsClient.connect();
         } catch (Exception e) {
             adapter.logWarning("Failed to create WebSocket connection: " + e.getMessage());
