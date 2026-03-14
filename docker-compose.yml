@@ -76,6 +76,17 @@ services:
     tty: true
     stdin_open: true
 
+  bot:
+    build: ./bot
+    container_name: minecraft-bot
+    ports:
+      - "3001:3001"
+    environment:
+      BOT_SERVERS: "paper:paper:25565,neoforge:neoforge:25565,fabric:fabric:25565"
+      BOT_USERNAME: "TakaroBot"
+      BOT_API_PORT: "3001"
+    restart: unless-stopped
+
   takaro-mcp:
     image: ghcr.io/gettakaro/mcp:latest
     container_name: takaro-mcp

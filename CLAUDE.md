@@ -1,3 +1,15 @@
+# Repository Engineer Skill
+
+This repository has an engineer skill at `.claude/skills/takaro-minecraft-engineer/`.
+
+Claude will automatically discover and use this skill. The skill contains:
+- `SKILL.md` — Overview and quick reference
+- `ARCHITECTURE.md` — Adapter pattern, event/action flows, key classes
+- `BUILD.md` — Gradle build system, deploy scripts, version catalog
+- `TESTING.md` — JUnit test commands and patterns
+- `DOCKER.md` — Dev server setup, RCON, configuration
+- `BOT.md` — Mineflayer test bot HTTP API and workflows
+
 IMPORTANT DOCUMENTATION:
 
 https://docs.takaro.io/advanced/adding-support-for-a-new-game
@@ -14,10 +26,11 @@ Multi-platform Minecraft connector using Gradle multi-module build:
 - `paper/` — Paper/Bukkit adapter. Shadow JAR with relocated deps.
 - `neoforge/` — NeoForge adapter. ModDevGradle + Shadow.
 - `fabric/` — Fabric adapter. Fabric Loom + Shadow.
+- `bot/` — Mineflayer test bot with HTTP API. See `/bot` skill for usage.
 
 ## Build
 
-Requires Java 21. Uses Gradle 8.12 with version catalog (`gradle/libs.versions.toml`).
+Requires Java 21. Uses Gradle 9.4.0 with version catalog (`gradle/libs.versions.toml`).
 
 ```bash
 ./gradlew build          # Build all modules
@@ -30,6 +43,7 @@ Requires Java 21. Uses Gradle 8.12 with version catalog (`gradle/libs.versions.t
 docker compose up -d paper      # Paper on :25565
 docker compose up -d neoforge   # NeoForge on :25566
 docker compose up -d fabric     # Fabric on :25567
+docker compose up -d bot        # Test bot API on :3001
 ```
 
 Deploy: `./scripts/deploy.sh paper|neoforge|fabric|all`

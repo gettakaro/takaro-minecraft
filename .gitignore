@@ -21,3 +21,6 @@ Thumbs.db
 
 # Fabric
 run/
+
+# Bot
+bot/node_modules/
