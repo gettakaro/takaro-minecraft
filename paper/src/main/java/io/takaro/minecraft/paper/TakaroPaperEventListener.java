@@ -31,7 +31,7 @@ public class TakaroPaperEventListener implements Listener {
     public void onPlayerQuit(PlayerQuitEvent event) {
         EventEmitter emitter = plugin.getEventEmitter();
         if (emitter == null) return;
-        emitter.emitPlayerDisconnected(event.getPlayer().getUniqueId().toString());
+        emitter.emitPlayerDisconnected(event.getPlayer().getUniqueId().toString(), event.getPlayer().getName());
     }
 
     @EventHandler

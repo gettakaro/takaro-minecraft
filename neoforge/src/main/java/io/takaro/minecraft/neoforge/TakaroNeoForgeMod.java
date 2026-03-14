@@ -81,7 +81,7 @@ public class TakaroNeoForgeMod {
         if (adapter == null) return;
         EventEmitter emitter = adapter.getEventEmitter();
         if (emitter == null) return;
-        emitter.emitPlayerDisconnected(event.getEntity().getUUID().toString());
+        emitter.emitPlayerDisconnected(event.getEntity().getUUID().toString(), event.getEntity().getName().getString());
     }
 
     @SubscribeEvent

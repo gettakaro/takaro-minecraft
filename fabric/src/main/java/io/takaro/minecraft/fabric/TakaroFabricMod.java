@@ -52,7 +52,7 @@ public class TakaroFabricMod implements DedicatedServerModInitializer {
             if (adapter == null) return;
             EventEmitter emitter = adapter.getEventEmitter();
             if (emitter == null) return;
-            emitter.emitPlayerDisconnected(handler.getPlayer().getUUID().toString());
+            emitter.emitPlayerDisconnected(handler.getPlayer().getUUID().toString(), handler.getPlayer().getGameProfile().name());
         });
 
         ServerMessageEvents.CHAT_MESSAGE.register((message, sender, params) -> {
