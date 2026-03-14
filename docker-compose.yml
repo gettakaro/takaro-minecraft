@@ -1,32 +1,63 @@
-version: '3.8'
-
 services:
-  minecraft:
+  paper:
     image: itzg/minecraft-server
-    container_name: minecraft-spigot
+    container_name: minecraft-paper
     ports:
       - "25565:25565"
       - "25575:25575"
     environment:
       EULA: "TRUE"
-      TYPE: SPIGOT
-      VERSION: 1.21.5
+      TYPE: PAPER
+      VERSION: "1.21.1"
       MEMORY: 2G
-      MAX_MEMORY: 4G
-      SERVER_NAME: "Minecraft Spigot Server"
-      MOTD: "Welcome to Minecraft Spigot Server"
-      DIFFICULTY: normal
-      GAMEMODE: survival
-      MAX_PLAYERS: 20
-      VIEW_DISTANCE: 10
-      SPAWN_PROTECTION: 16
-      ENABLE_COMMAND_BLOCK: "true"
-      ONLINE_MODE: "true"
       ENABLE_RCON: "true"
-      RCON_PASSWORD: "takaro123"
+      RCON_PASSWORD: "${RCON_PASSWORD:-takaro123}"
       RCON_PORT: 25575
+      ONLINE_MODE: "false"
     volumes:
-      - ./_data:/data
+      - ./_data/paper:/data
+    restart: unless-stopped
+    tty: true
+    stdin_open: true
+
+  neoforge:
+    image: itzg/minecraft-server
+    container_name: minecraft-neoforge
+    ports:
+      - "25566:25565"
+      - "25576:25575"
+    environment:
+      EULA: "TRUE"
+      TYPE: NEOFORGE
+      VERSION: "1.21.1"
+      MEMORY: 2G
+      ENABLE_RCON: "true"
+      RCON_PASSWORD: "${RCON_PASSWORD:-takaro123}"
+      RCON_PORT: 25575
+      ONLINE_MODE: "false"
+    volumes:
+      - ./_data/neoforge:/data
+    restart: unless-stopped
+    tty: true
+    stdin_open: true
+
+  fabric:
+    image: itzg/minecraft-server
+    container_name: minecraft-fabric
+    ports:
+      - "25567:25565"
+      - "25577:25575"
+    environment:
+      EULA: "TRUE"
+      TYPE: FABRIC
+      VERSION: "1.21.1"
+      MEMORY: 2G
+      ENABLE_RCON: "true"
+      RCON_PASSWORD: "${RCON_PASSWORD:-takaro123}"
+      RCON_PORT: 25575
+      ONLINE_MODE: "false"
+    volumes:
+      - ./_data/fabric:/data
     restart: unless-stopped
     tty: true
     stdin_open: true

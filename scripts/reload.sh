@@ -1,32 +1,36 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-CONTAINER_NAME="minecraft-spigot"
-RCON_PASSWORD="takaro123"
-RCON_PORT="25575"
+PLATFORM="${1:-all}"
+RCON_PASS="${RCON_PASSWORD:-takaro123}"
 
-# Check if container is running
-if ! docker ps | grep -q "$CONTAINER_NAME"; then
-    echo "Minecraft container is not running!"
-    exit 1
-fi
+reload_paper() {
+    echo "Reloading Paper server..."
+    docker exec minecraft-paper rcon-cli --password "$RCON_PASS" "reload confirm" 2>/dev/null || \
+        echo "  Warning: Could not connect to Paper RCON"
+}
 
-echo "Reloading Takaro plugin..."
+reload_neoforge() {
+    echo "NeoForge does not support hot reload. Restart the container:"
+    echo "  docker compose restart neoforge"
+}
 
-# Install mcrcon if not present
-if ! command -v mcrcon &> /dev/null; then
-    echo "Installing mcrcon..."
-    # Try to install using docker exec instead
-    docker exec "$CONTAINER_NAME" rcon-cli reload confirm
-else
-    # Use mcrcon if available
-    mcrcon -H localhost -P "$RCON_PORT" -p "$RCON_PASSWORD" "reload confirm"
-fi
+reload_fabric() {
+    echo "Fabric does not support hot reload. Restart the container:"
+    echo "  docker compose restart fabric"
+}
 
-# Alternative: Use docker exec with rcon-cli (included in itzg/minecraft-server image)
-docker exec "$CONTAINER_NAME" rcon-cli reload confirm
-
-if [ $? -eq 0 ]; then
-    echo "Plugin reloaded successfully!"
-else
-    echo "Failed to reload plugin. You may need to restart the server."
-fi
+case "$PLATFORM" in
+    paper)    reload_paper ;;
+    neoforge) reload_neoforge ;;
+    fabric)   reload_fabric ;;
+    all)
+        reload_paper
+        reload_neoforge
+        reload_fabric
+        ;;
+    *)
+        echo "Usage: $0 {paper|neoforge|fabric|all}"
+        exit 1
+        ;;
+esac

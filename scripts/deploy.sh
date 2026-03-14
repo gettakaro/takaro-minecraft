@@ -1,32 +1,62 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
 
-# Find the actual JAR file
-PLUGIN_JAR=$(find plugin/target -name "takaro-minecraft-*.jar" -type f | head -n 1)
-CONTAINER_NAME="minecraft-spigot"
+PLATFORM="${1:-all}"
 
-# Check if the JAR exists
-if [ -z "$PLUGIN_JAR" ] || [ ! -f "$PLUGIN_JAR" ]; then
-    echo "Plugin JAR not found! Run build.sh first."
-    exit 1
-fi
+find_jar() {
+    local module="$1"
+    local jar
+    # Find the main JAR (not dev-shadow, not sources)
+    jar=$(find "$module/build/libs" -name "${module}-*.jar" \
+        -not -name "*-dev-shadow*" -not -name "*-sources*" 2>/dev/null | head -1)
+    if [ -z "$jar" ]; then
+        echo "Error: No JAR found for $module. Run ./scripts/build.sh first." >&2
+        exit 1
+    fi
+    echo "$jar"
+}
 
-echo "Using JAR file: $PLUGIN_JAR"
+deploy_paper() {
+    local jar
+    jar=$(find_jar paper)
+    echo "Deploying Paper plugin..."
+    mkdir -p _data/paper/plugins
+    cp "$jar" _data/paper/plugins/TakaroMinecraft.jar
+    echo "  -> _data/paper/plugins/TakaroMinecraft.jar"
+}
 
-# Check if container is running
-if ! docker ps | grep -q "$CONTAINER_NAME"; then
-    echo "Minecraft container is not running! Start it with: docker-compose up -d"
-    exit 1
-fi
+deploy_neoforge() {
+    local jar
+    jar=$(find_jar neoforge)
+    echo "Deploying NeoForge mod..."
+    mkdir -p _data/neoforge/mods
+    cp "$jar" _data/neoforge/mods/TakaroMinecraft.jar
+    echo "  -> _data/neoforge/mods/TakaroMinecraft.jar"
+}
 
-echo "Deploying plugin to Minecraft server..."
+deploy_fabric() {
+    local jar
+    jar=$(find_jar fabric)
+    echo "Deploying Fabric mod..."
+    mkdir -p _data/fabric/mods
+    cp "$jar" _data/fabric/mods/TakaroMinecraft.jar
+    echo "  -> _data/fabric/mods/TakaroMinecraft.jar"
+}
 
-# Copy the JAR to the container
-docker cp "$PLUGIN_JAR" "$CONTAINER_NAME:/data/plugins/takaro-minecraft.jar"
+case "$PLATFORM" in
+    paper)    deploy_paper ;;
+    neoforge) deploy_neoforge ;;
+    fabric)   deploy_fabric ;;
+    all)
+        deploy_paper
+        deploy_neoforge
+        deploy_fabric
+        ;;
+    *)
+        echo "Usage: $0 {paper|neoforge|fabric|all}"
+        exit 1
+        ;;
+esac
 
-if [ $? -eq 0 ]; then
-    echo "Plugin deployed successfully!"
-    echo "Use reload.sh to reload the plugin without restarting the server."
-else
-    echo "Failed to deploy plugin!"
-    exit 1
-fi
+echo "Done."

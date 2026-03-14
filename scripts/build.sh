@@ -1,23 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
 
-echo "Building Takaro Minecraft Plugin using Docker..."
+echo "Building all modules..."
+./gradlew build
 
-# Build the Docker image if needed
-docker-compose -f docker-compose.build.yml build
-
-# Run the build
-docker-compose -f docker-compose.build.yml run --rm maven-build
-
-if [ $? -eq 0 ]; then
-    # Find the actual JAR file created
-    JAR_FILE=$(find plugin/target -name "takaro-minecraft-*.jar" -type f | head -n 1)
-    if [ -n "$JAR_FILE" ]; then
-        echo "Build successful! JAR file created at: $JAR_FILE"
-    else
-        echo "Build failed! No JAR file found in plugin/target/"
-        exit 1
-    fi
-else
-    echo "Build failed!"
-    exit 1
-fi
+echo ""
+echo "Build artifacts:"
+find . -path "*/build/libs/*.jar" -not -name "*-dev-*" -not -name "*-sources*" | sort

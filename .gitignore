@@ -1,21 +1,23 @@
 # Minecraft server data
 _data/
 
-# Build artifacts
-plugin/target/
-plugin/.m2/
-
-# Docker
-*.log
-.env
-
-# OS files
-.DS_Store
-Thumbs.db
+# Gradle
+.gradle/
+build/
+*/build/
 
 # IDE files
 .idea/
 .vscode/
+*.iml
 *.swp
 *.swo
 *~
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+
+# Fabric
+run/
