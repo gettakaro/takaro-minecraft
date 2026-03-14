@@ -61,7 +61,7 @@ public class TakaroFabricMod implements DedicatedServerModInitializer {
             if (emitter == null) return;
             emitter.emitChatMessage(
                     sender.getUUID().toString(),
-                    sender.getGameProfile().getName(),
+                    sender.getGameProfile().name(),
                     "global",
                     message.signedContent()
             );
@@ -78,14 +78,14 @@ public class TakaroFabricMod implements DedicatedServerModInitializer {
                 String attackerName = null;
                 if (damageSource.getEntity() instanceof Player attacker) {
                     attackerGameId = attacker.getUUID().toString();
-                    attackerName = attacker.getGameProfile().getName();
+                    attackerName = attacker.getGameProfile().name();
                 }
                 emitter.emitPlayerDeath(
                         victim.getUUID().toString(),
-                        victim.getGameProfile().getName(),
+                        victim.getGameProfile().name(),
                         attackerGameId, attackerName,
                         victim.getX(), victim.getY(), victim.getZ(),
-                        adapter.mapDimension(victim.level().dimension().location())
+                        adapter.mapDimension(victim.level().dimension().identifier())
                 );
             } else if (damageSource.getEntity() instanceof ServerPlayer killer) {
                 // Entity killed by player
@@ -98,7 +98,7 @@ public class TakaroFabricMod implements DedicatedServerModInitializer {
                 }
                 emitter.emitEntityKilled(
                         killer.getUUID().toString(),
-                        killer.getGameProfile().getName(),
+                        killer.getGameProfile().name(),
                         entityKey != null ? entityKey.toString() : "unknown",
                         weaponCode
                 );

@@ -4,10 +4,11 @@ import io.takaro.minecraft.core.EventEmitter;
 import io.takaro.minecraft.core.GameAdapter;
 import io.takaro.minecraft.core.model.*;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.NameAndId;
 import net.minecraft.server.players.UserBanListEntry;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -62,7 +63,7 @@ public class NeoForgeGameAdapter implements GameAdapter {
         if (player == null) return null;
         return new PlayerLocation(
                 player.getX(), player.getY(), player.getZ(),
-                mapDimension(player.level().dimension().location())
+                mapDimension(player.level().dimension().identifier())
         );
     }
 
@@ -71,7 +72,7 @@ public class NeoForgeGameAdapter implements GameAdapter {
         ServerPlayer player = server.getPlayerList().getPlayer(UUID.fromString(gameId));
         if (player == null) return Collections.emptyList();
         List<InventoryItem> items = new ArrayList<>();
-        for (ItemStack stack : player.getInventory().items) {
+        for (ItemStack stack : player.getInventory().getNonEquipmentItems()) {
             if (!stack.isEmpty()) {
                 var key = BuiltInRegistries.ITEM.getKey(stack.getItem());
                 items.add(new InventoryItem(
@@ -93,7 +94,7 @@ public class NeoForgeGameAdapter implements GameAdapter {
                 var key = BuiltInRegistries.ITEM.getKey(item);
                 items.add(new GameItem(
                         key.toString(),
-                        item.getDescription().getString(),
+                        item.getName().getString(),
                         ""
                 ));
             }
@@ -126,9 +127,9 @@ public class NeoForgeGameAdapter implements GameAdapter {
     public void giveItem(String gameId, String itemCode, int amount, String quality) {
         ServerPlayer player = server.getPlayerList().getPlayer(UUID.fromString(gameId));
         if (player == null) return;
-        var item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(itemCode));
-        if (item == Items.AIR) return;
-        ItemStack stack = new ItemStack(item, amount);
+        var itemHolder = BuiltInRegistries.ITEM.get(Identifier.parse(itemCode));
+        if (itemHolder.isEmpty() || itemHolder.get().value() == Items.AIR) return;
+        ItemStack stack = new ItemStack(itemHolder.get(), amount);
         player.getInventory().add(stack);
     }
 
@@ -162,7 +163,7 @@ public class NeoForgeGameAdapter implements GameAdapter {
         if (player == null) return;
         ServerLevel level = dimension != null ? getLevelForDimension(dimension) : (ServerLevel) player.level();
         if (level == null) level = (ServerLevel) player.level();
-        player.teleportTo(level, x, y, z, Set.of(), player.getYRot(), player.getXRot());
+        player.teleportTo(level, x, y, z, Set.of(), player.getYRot(), player.getXRot(), false);
     }
 
     @Override
@@ -176,56 +177,41 @@ public class NeoForgeGameAdapter implements GameAdapter {
     @Override
     public void banPlayer(String gameId, String reason, String expiresAt) {
         UUID uuid = UUID.fromString(gameId);
-        var profile = server.getProfileCache().get(uuid).orElse(null);
-        if (profile == null) {
-            profile = new com.mojang.authlib.GameProfile(uuid, "");
-        }
+        ServerPlayer onlinePlayer = server.getPlayerList().getPlayer(uuid);
+        String playerName = onlinePlayer != null ? onlinePlayer.getGameProfile().name() : "";
+        var nameAndId = new NameAndId(uuid, playerName);
         Date expiry = null;
         if (expiresAt != null) {
             expiry = Date.from(java.time.Instant.parse(expiresAt));
         }
-        var entry = new UserBanListEntry(profile, null, "Takaro", expiry, reason);
+        var entry = new UserBanListEntry(nameAndId, null, "Takaro", expiry, reason);
         server.getPlayerList().getBans().add(entry);
         // Kick if online
-        ServerPlayer player = server.getPlayerList().getPlayer(uuid);
-        if (player != null) {
-            player.connection.disconnect(net.minecraft.network.chat.Component.literal("Banned: " + reason));
+        if (onlinePlayer != null) {
+            onlinePlayer.connection.disconnect(net.minecraft.network.chat.Component.literal("Banned: " + reason));
         }
     }
 
     @Override
     public void unbanPlayer(String gameId) {
         UUID uuid = UUID.fromString(gameId);
-        var profile = server.getProfileCache().get(uuid).orElse(null);
-        if (profile == null) {
-            profile = new com.mojang.authlib.GameProfile(uuid, "");
-        }
-        server.getPlayerList().getBans().remove(profile);
+        var nameAndId = new NameAndId(uuid, "");
+        server.getPlayerList().getBans().remove(nameAndId);
     }
 
     @Override
     public List<BanEntry> listBans() {
         List<BanEntry> bans = new ArrayList<>();
-        var banList = server.getPlayerList().getBans();
-        for (String key : banList.getUserList()) {
-            try {
-                UUID uuid = UUID.fromString(key);
-                var profile = server.getProfileCache().get(uuid).orElse(
-                        new com.mojang.authlib.GameProfile(uuid, "")
-                );
-                var entry = banList.get(profile);
-                if (entry != null) {
-                    String expiresAt = entry.getExpires() != null ? entry.getExpires().toInstant().toString() : null;
-                    bans.add(new BanEntry(
-                            profile.getId() != null ? profile.getId().toString() : "",
-                            profile.getName() != null ? profile.getName() : "",
-                            entry.getReason(),
-                            expiresAt
-                    ));
-                }
-            } catch (IllegalArgumentException e) {
-                logger.warn("Skipping ban entry with non-UUID key '{}': {}", key, e.getMessage());
-            }
+        for (var entry : server.getPlayerList().getBans().getEntries()) {
+            var user = entry.getUser();
+            if (user == null) continue;
+            String expiresAt = entry.getExpires() != null ? entry.getExpires().toInstant().toString() : null;
+            bans.add(new BanEntry(
+                    user.id().toString(),
+                    user.name(),
+                    entry.getReason(),
+                    expiresAt
+            ));
         }
         return bans;
     }
@@ -246,7 +232,7 @@ public class NeoForgeGameAdapter implements GameAdapter {
         String ip = player.getIpAddress();
         return new PlayerInfo(
                 player.getUUID().toString(),
-                player.getGameProfile().getName(),
+                player.getGameProfile().name(),
                 null, null, null,
                 "minecraft",
                 ip != null ? ip : "",
@@ -254,7 +240,7 @@ public class NeoForgeGameAdapter implements GameAdapter {
         );
     }
 
-    String mapDimension(ResourceLocation dimensionId) {
+    String mapDimension(Identifier dimensionId) {
         String path = dimensionId.toString();
         return switch (path) {
             case "minecraft:overworld" -> "overworld";
@@ -266,7 +252,7 @@ public class NeoForgeGameAdapter implements GameAdapter {
 
     private ServerLevel getLevelForDimension(String dimension) {
         for (ServerLevel level : server.getAllLevels()) {
-            if (mapDimension(level.dimension().location()).equals(dimension)) {
+            if (mapDimension(level.dimension().identifier()).equals(dimension)) {
                 return level;
             }
         }

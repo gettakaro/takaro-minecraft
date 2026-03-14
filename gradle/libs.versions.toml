@@ -1,17 +1,17 @@
 [versions]
-minecraft = "1.21.1"
-paper-api = "1.21.1-R0.1-SNAPSHOT"
-neoforge-version = "21.1.77"
-fabric-loader = "0.16.9"
-fabric-api = "0.107.0+1.21.1"
+minecraft = "1.21.11"
+paper-api = "1.21.11-R0.1-SNAPSHOT"
+neoforge-version = "21.11.38-beta"
+fabric-loader = "0.18.4"
+fabric-api = "0.141.3+1.21.11"
 
 java-websocket = "1.6.0"
 gson = "2.11.0"
 log4j = "2.24.3"
 
-shadow = "8.3.5"
-fabric-loom = "1.9-SNAPSHOT"
-neoforge-moddev = "2.0.42-beta"
+shadow = "9.3.2"
+fabric-loom = "1.15-SNAPSHOT"
+neoforge-moddev = "2.0.140"
 
 [libraries]
 java-websocket = { module = "org.java-websocket:Java-WebSocket", version.ref = "java-websocket" }
