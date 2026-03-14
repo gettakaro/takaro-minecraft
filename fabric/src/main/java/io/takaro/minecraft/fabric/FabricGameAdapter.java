@@ -233,7 +233,7 @@ public class FabricGameAdapter implements GameAdapter {
                 player.getUUID().toString(),
                 player.getGameProfile().name(),
                 null, null, null,
-                "minecraft",
+                PlayerInfo.buildPlatformId(player.getUUID().toString()),
                 ip != null ? ip : "",
                 player.connection.latency()
         );

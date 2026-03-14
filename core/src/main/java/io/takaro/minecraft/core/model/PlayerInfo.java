@@ -9,4 +9,10 @@ public record PlayerInfo(
         String platformId,
         String ip,
         int ping
-) {}
+) {
+    public static final String PLATFORM_PREFIX = "minecraft:";
+
+    public static String buildPlatformId(String uuid) {
+        return PLATFORM_PREFIX + uuid;
+    }
+}

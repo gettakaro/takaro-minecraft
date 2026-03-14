@@ -65,7 +65,7 @@ class ActionRoutingTest {
 
     @Test
     void getPlayerWithKnownIdReturnsPlayer() {
-        adapter.knownPlayer = new PlayerInfo("abc-123", "Steve", null, null, null, "minecraft", "127.0.0.1", 42);
+        adapter.knownPlayer = new PlayerInfo("abc-123", "Steve", null, null, null, "minecraft:abc-123", "127.0.0.1", 42);
         sendRequest("getPlayer", "req-3", "{\"gameId\":\"abc-123\"}");
         waitForResponse();
 
@@ -74,6 +74,7 @@ class ActionRoutingTest {
         JsonObject payload = response.getAsJsonObject("payload");
         assertEquals("abc-123", payload.get("gameId").getAsString());
         assertEquals("Steve", payload.get("name").getAsString());
+        assertEquals("minecraft:abc-123", payload.get("platformId").getAsString());
         assertEquals(42, payload.get("ping").getAsInt());
     }
 
@@ -216,7 +217,7 @@ class ActionRoutingTest {
 
     @Test
     void eventEmitterPlayerConnected() {
-        client.emitPlayerConnected(new PlayerInfo("uuid-1", "Steve", null, null, null, "minecraft", "1.2.3.4", 10));
+        client.emitPlayerConnected(new PlayerInfo("uuid-1", "Steve", null, null, null, "minecraft:uuid-1", "1.2.3.4", 10));
 
         assertEquals(1, sentMessages.size());
         JsonObject msg = parseResponse(sentMessages.get(0));
@@ -224,6 +225,7 @@ class ActionRoutingTest {
         JsonObject eventPayload = msg.getAsJsonObject("payload");
         assertEquals("player-connected", eventPayload.get("type").getAsString());
         assertEquals("uuid-1", eventPayload.getAsJsonObject("data").getAsJsonObject("player").get("gameId").getAsString());
+        assertEquals("minecraft:uuid-1", eventPayload.getAsJsonObject("data").getAsJsonObject("player").get("platformId").getAsString());
     }
 
     @Test
