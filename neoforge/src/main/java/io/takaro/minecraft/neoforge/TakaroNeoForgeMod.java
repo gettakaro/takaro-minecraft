@@ -52,6 +52,9 @@ public class TakaroNeoForgeMod {
             public void logWarning(String msg) { LOGGER.warn(msg); }
 
             @Override
+            public void logDebug(String msg) { LOGGER.info("[DEBUG] " + msg); }
+
+            @Override
             public void runOnMainThread(Runnable task) { server.execute(task); }
         };
 
@@ -90,6 +93,7 @@ public class TakaroNeoForgeMod {
             config.setReconnectDelay(Long.parseLong(props.getProperty("takaro.reconnect.delay", "5000")));
             config.setMaxReconnectDelay(Long.parseLong(props.getProperty("takaro.reconnect.max_delay", "300000")));
             config.setBackoffMultiplier(Double.parseDouble(props.getProperty("takaro.reconnect.backoff_multiplier", "1.5")));
+            config.setDebugEnabled(Boolean.parseBoolean(props.getProperty("takaro.debug", "false")));
             return config;
         } catch (NumberFormatException e) {
             LOGGER.error("Invalid number in config: {}", e.getMessage());
@@ -107,7 +111,8 @@ public class TakaroNeoForgeMod {
                     "takaro.reconnect.enabled=true\n" +
                     "takaro.reconnect.delay=5000\n" +
                     "takaro.reconnect.max_delay=300000\n" +
-                    "takaro.reconnect.backoff_multiplier=1.5\n");
+                    "takaro.reconnect.backoff_multiplier=1.5\n" +
+                    "takaro.debug=false\n");
             LOGGER.info("Default config created at {}", path);
         } catch (IOException e) {
             LOGGER.error("Failed to create default config: {}", e.getMessage());

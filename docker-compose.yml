@@ -17,6 +17,7 @@ services:
       TAKARO_WS_URL: "${TAKARO_WS_URL}"
       TAKARO_REGISTRATION_TOKEN: "${TAKARO_REGISTRATION_TOKEN}"
       TAKARO_IDENTITY_TOKEN: "takaro-paper-dev"
+      TAKARO_DEBUG: "${TAKARO_DEBUG:-false}"
     volumes:
       - ./_data/paper:/data
     restart: unless-stopped
@@ -41,6 +42,7 @@ services:
       TAKARO_WS_URL: "${TAKARO_WS_URL}"
       TAKARO_REGISTRATION_TOKEN: "${TAKARO_REGISTRATION_TOKEN}"
       TAKARO_IDENTITY_TOKEN: "takaro-neoforge-dev"
+      TAKARO_DEBUG: "${TAKARO_DEBUG:-false}"
     volumes:
       - ./_data/neoforge:/data
     restart: unless-stopped
@@ -66,8 +68,22 @@ services:
       TAKARO_WS_URL: "${TAKARO_WS_URL}"
       TAKARO_REGISTRATION_TOKEN: "${TAKARO_REGISTRATION_TOKEN}"
       TAKARO_IDENTITY_TOKEN: "takaro-fabric-dev"
+      TAKARO_DEBUG: "${TAKARO_DEBUG:-false}"
     volumes:
       - ./_data/fabric:/data
     restart: unless-stopped
     tty: true
     stdin_open: true
+
+  takaro-mcp:
+    image: ghcr.io/gettakaro/mcp:latest
+    container_name: takaro-mcp
+    ports:
+      - "3000:3000"
+    environment:
+      TAKARO_USERNAME: "${TAKARO_USERNAME}"
+      TAKARO_PASSWORD: "${TAKARO_PASSWORD}"
+      TAKARO_DOMAIN_ID: "${TAKARO_DOMAIN_ID}"
+      TAKARO_HOST: "${TAKARO_HOST:-https://api.next.takaro.dev}"
+      HOST: "0.0.0.0"
+    restart: unless-stopped

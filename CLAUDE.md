@@ -34,6 +34,8 @@ docker compose up -d fabric     # Fabric on :25567
 
 Deploy: `./scripts/deploy.sh paper|neoforge|fabric|all`
 
+Debug logging: `TAKARO_DEBUG=true docker compose up -d paper` — shows raw WebSocket messages in logs.
+
 ## Current Status
 
 Phase 1 scaffold — only `testReachability` is implemented. Full protocol implementation comes in Phase 2.

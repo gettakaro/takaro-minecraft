@@ -25,6 +25,10 @@ public class TakaroConnector {
         }
 
         adapter.logInfo("Connecting to Takaro at " + url);
+        if (config.isDebugEnabled()) {
+            adapter.logDebug("Config: wsUrl=" + url + ", reconnect=" + config.isReconnectEnabled()
+                    + ", reconnectDelay=" + config.getReconnectDelay() + ", debug=true");
+        }
         try {
             wsClient = new TakaroWebSocketClient(new URI(url), adapter, config);
             wsClient.connect();

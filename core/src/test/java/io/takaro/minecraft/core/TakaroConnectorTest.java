@@ -12,12 +12,16 @@ class TakaroConnectorTest {
     private static class TestAdapter implements GameAdapter {
         final List<String> infos = new ArrayList<>();
         final List<String> warnings = new ArrayList<>();
+        final List<String> debugs = new ArrayList<>();
 
         @Override
         public void logInfo(String msg) { infos.add(msg); }
 
         @Override
         public void logWarning(String msg) { warnings.add(msg); }
+
+        @Override
+        public void logDebug(String msg) { debugs.add(msg); }
 
         @Override
         public void runOnMainThread(Runnable task) { task.run(); }

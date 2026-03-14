@@ -16,6 +16,7 @@ class TakaroConfigTest {
         assertEquals(5000, config.getReconnectDelay());
         assertEquals(300000, config.getMaxReconnectDelay());
         assertEquals(1.5, config.getBackoffMultiplier());
+        assertFalse(config.isDebugEnabled());
     }
 
     @Test
@@ -28,6 +29,7 @@ class TakaroConfigTest {
         config.setReconnectDelay(10000);
         config.setMaxReconnectDelay(60000);
         config.setBackoffMultiplier(2.0);
+        config.setDebugEnabled(true);
 
         assertEquals("wss://example.com", config.getWsUrl());
         assertEquals("id-token", config.getIdentityToken());
@@ -36,6 +38,7 @@ class TakaroConfigTest {
         assertEquals(10000, config.getReconnectDelay());
         assertEquals(60000, config.getMaxReconnectDelay());
         assertEquals(2.0, config.getBackoffMultiplier());
+        assertTrue(config.isDebugEnabled());
     }
 
     @Test
@@ -57,5 +60,6 @@ class TakaroConfigTest {
         assertNotNull(config.getWsUrl());
         assertNotNull(config.getIdentityToken());
         assertNotNull(config.getRegistrationToken());
+        assertFalse(config.isDebugEnabled());
     }
 }

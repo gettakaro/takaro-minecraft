@@ -22,6 +22,7 @@ public class TakaroPaperPlugin extends JavaPlugin implements GameAdapter {
         config.setReconnectDelay(getConfig().getLong("takaro.reconnect.delay", 5000));
         config.setMaxReconnectDelay(getConfig().getLong("takaro.reconnect.max_delay", 300000));
         config.setBackoffMultiplier(getConfig().getDouble("takaro.reconnect.backoff_multiplier", 1.5));
+        config.setDebugEnabled(getConfig().getBoolean("takaro.debug", false));
         config.applyEnvOverrides();
 
         if (config.getWsUrl() == null || config.getWsUrl().isEmpty()) {
@@ -48,6 +49,11 @@ public class TakaroPaperPlugin extends JavaPlugin implements GameAdapter {
     @Override
     public void logWarning(String msg) {
         getLogger().warning(msg);
+    }
+
+    @Override
+    public void logDebug(String msg) {
+        getLogger().info("[DEBUG] " + msg);
     }
 
     @Override

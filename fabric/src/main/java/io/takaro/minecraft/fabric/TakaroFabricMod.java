@@ -45,6 +45,9 @@ public class TakaroFabricMod implements DedicatedServerModInitializer {
                 public void logWarning(String msg) { LOGGER.warn(msg); }
 
                 @Override
+                public void logDebug(String msg) { LOGGER.info("[DEBUG] " + msg); }
+
+                @Override
                 public void runOnMainThread(Runnable task) { server.execute(task); }
             };
 
@@ -82,6 +85,8 @@ public class TakaroFabricMod implements DedicatedServerModInitializer {
             config.setReconnectDelay(reconnect.has("delay") ? reconnect.get("delay").getAsLong() : 5000);
             config.setMaxReconnectDelay(reconnect.has("max_delay") ? reconnect.get("max_delay").getAsLong() : 300000);
             config.setBackoffMultiplier(reconnect.has("backoff_multiplier") ? reconnect.get("backoff_multiplier").getAsDouble() : 1.5);
+            JsonObject settings = json.has("settings") && json.get("settings").isJsonObject() ? json.getAsJsonObject("settings") : new JsonObject();
+            config.setDebugEnabled(settings.has("debug") && settings.get("debug").getAsBoolean());
             return config;
         } catch (Exception e) {
             LOGGER.error("Failed to load config: {}", e.getMessage());
@@ -107,6 +112,9 @@ public class TakaroFabricMod implements DedicatedServerModInitializer {
             reconnect.addProperty("max_delay", 300000);
             reconnect.addProperty("backoff_multiplier", 1.5);
             json.add("reconnect", reconnect);
+            JsonObject settings = new JsonObject();
+            settings.addProperty("debug", false);
+            json.add("settings", settings);
 
             Files.writeString(path, new com.google.gson.GsonBuilder().setPrettyPrinting().create().toJson(json));
             LOGGER.info("Default config created at {}", path);

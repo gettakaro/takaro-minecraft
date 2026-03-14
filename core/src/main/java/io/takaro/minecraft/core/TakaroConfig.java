@@ -8,6 +8,7 @@ public class TakaroConfig {
     private long reconnectDelay = 5000;
     private long maxReconnectDelay = 300000;
     private double backoffMultiplier = 1.5;
+    private boolean debugEnabled = false;
 
     public String getWsUrl() { return wsUrl; }
     public void setWsUrl(String wsUrl) { this.wsUrl = wsUrl; }
@@ -30,6 +31,9 @@ public class TakaroConfig {
     public double getBackoffMultiplier() { return backoffMultiplier; }
     public void setBackoffMultiplier(double backoffMultiplier) { this.backoffMultiplier = backoffMultiplier; }
 
+    public boolean isDebugEnabled() { return debugEnabled; }
+    public void setDebugEnabled(boolean debugEnabled) { this.debugEnabled = debugEnabled; }
+
     public void applyEnvOverrides() {
         String wsUrlEnv = System.getenv("TAKARO_WS_URL");
         if (wsUrlEnv != null && !wsUrlEnv.isEmpty()) {
@@ -42,6 +46,10 @@ public class TakaroConfig {
         String registrationEnv = System.getenv("TAKARO_REGISTRATION_TOKEN");
         if (registrationEnv != null && !registrationEnv.isEmpty()) {
             this.registrationToken = registrationEnv;
+        }
+        String debugEnv = System.getenv("TAKARO_DEBUG");
+        if (debugEnv != null && !debugEnv.isEmpty()) {
+            this.debugEnabled = "true".equalsIgnoreCase(debugEnv) || "1".equals(debugEnv);
         }
     }
 }

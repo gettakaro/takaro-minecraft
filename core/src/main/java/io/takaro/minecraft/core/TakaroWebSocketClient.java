@@ -38,6 +38,9 @@ public class TakaroWebSocketClient extends WebSocketClient {
 
     @Override
     public void onMessage(String message) {
+        if (config.isDebugEnabled()) {
+            adapter.logDebug("WS RECV: " + message);
+        }
         try {
             JsonObject json = JsonParser.parseString(message).getAsJsonObject();
             String type = json.has("type") ? json.get("type").getAsString() : "";
@@ -114,6 +117,9 @@ public class TakaroWebSocketClient extends WebSocketClient {
         JsonObject msg = new JsonObject();
         msg.addProperty("type", "identify");
         msg.add("payload", payload);
+        if (config.isDebugEnabled()) {
+            adapter.logDebug("WS SEND identify (tokens redacted)");
+        }
         send(msg.toString());
     }
 
@@ -152,6 +158,9 @@ public class TakaroWebSocketClient extends WebSocketClient {
 
         JsonObject payload = json.has("payload") ? json.getAsJsonObject("payload") : new JsonObject();
         String action = payload.has("action") ? payload.get("action").getAsString() : "";
+        if (config.isDebugEnabled()) {
+            adapter.logDebug("Request: action=" + action + ", requestId=" + requestId);
+        }
 
         if ("testReachability".equals(action)) {
             JsonObject responsePayload = new JsonObject();
@@ -174,6 +183,9 @@ public class TakaroWebSocketClient extends WebSocketClient {
             msg.add("payload", payload);
         }
 
+        if (config.isDebugEnabled()) {
+            adapter.logDebug("WS SEND response (requestId=" + requestId + "): " + msg);
+        }
         send(msg.toString());
     }
 

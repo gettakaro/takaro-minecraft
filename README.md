@@ -63,6 +63,7 @@ Environment variables override file-based config when set:
 | `TAKARO_WS_URL` | WebSocket URL for your Takaro instance |
 | `TAKARO_IDENTITY_TOKEN` | Unique identity token for this server |
 | `TAKARO_REGISTRATION_TOKEN` | Registration token from the Takaro dashboard |
+| `TAKARO_DEBUG` | Enable debug logging (`true` or `1`) — shows raw WebSocket messages |
 
 In Docker Compose, these are passed to containers automatically from your `.env` file. Each container gets a hardcoded `TAKARO_IDENTITY_TOKEN` (e.g. `takaro-paper-dev`).
 
@@ -78,6 +79,7 @@ takaro:
   authentication:
     identity_token: "your-identity-token"
     registration_token: "your-registration-token"
+  debug: false
 ```
 
 **NeoForge** (`_data/neoforge/config/takaro.properties`):
@@ -85,6 +87,7 @@ takaro:
 takaro.websocket.url=wss://connect.takaro.io/
 takaro.authentication.identity_token=your-identity-token
 takaro.authentication.registration_token=your-registration-token
+takaro.debug=false
 ```
 
 **Fabric** (`_data/fabric/config/takaro.json`):
@@ -94,7 +97,8 @@ takaro.authentication.registration_token=your-registration-token
   "authentication": {
     "identity_token": "your-identity-token",
     "registration_token": "your-registration-token"
-  }
+  },
+  "settings": { "debug": false }
 }
 ```
 
